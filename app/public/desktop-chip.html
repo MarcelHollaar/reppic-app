@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reppic — opname</title>
+    <!--
+      Losstaande pagina, bewust GEEN Next.js-route: de root layout wikkelt elke
+      pagina in de app-schil (navigatie, providers), waardoor het chip-venster
+      eruitzag als een samengeperste homepage. Deze pagina wordt rechtstreeks
+      uit /public geserveerd en heeft alleen wat ze nodig heeft.
+      Communicatie met het hoofdvenster loopt via BroadcastChannel.
+    -->
+    <style>
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+        -webkit-user-select: none;
+        user-select: none;
+        cursor: default;
+        overflow: hidden;
+      }
+      #root { padding: 10px; }
+      /*
+        Frameless venster versleepbaar maken (officiële Electron-manier:
+        app-region drag/no-drag). Zo kan de gebruiker de chip wegslepen als hij
+        knoppen in de meeting/Teams overlapt. De knoppen zelf krijgen no-drag,
+        anders zijn ze niet meer klikbaar. Beide vormen -webkit-app-region en
+        app-region voor brede Chromium-compatibiliteit.
+      */
+      .card, .rec {
+        -webkit-app-region: drag;
+        app-region: drag;
+      }
+      button {
+        -webkit-app-region: no-drag;
+        app-region: no-drag;
+      }
+      .card {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.28);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        padding: 14px 16px 15px;
+        cursor: grab;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .brand img { height: 16px; width: auto; display: block; }
+      .title {
+        font-size: 14px;
+        font-weight: 650;
+        color: #0f172a;
+        margin: 0 0 4px;
+        line-height: 1.3;
+      }
+      .sub {
+        font-size: 12px;
+        color: #64748b;
+        margin: 0 0 12px;
+        line-height: 1.45;
+      }
+      .row { display: flex; gap: 8px; }
+      button {
+        flex: 1;
+        border: 0;
+        border-radius: 9px;
+        padding: 9px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .primary { background: #4f5df6; color: #fff; }
+      .primary:hover { background: #4353e8; }
+      .secondary { background: #f1f5f9; color: #475569; }
+      .secondary:hover { background: #e2e8f0; }
+
+      /* Opname loopt */
+      .rec {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: #0f172a;
+        border-radius: 14px;
+        padding: 13px 14px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.32);
+        cursor: grab;
+      }
+      .rec .dot {
+        width: 9px; height: 9px; border-radius: 50%;
+        background: #ef4444; flex: none;
+        animation: pulse 1.6s ease-in-out infinite;
+      }
+      .rec .label { color: #fff; font-size: 13px; font-weight: 600; flex: 1; }
+      .rec button {
+        flex: none;
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+        padding: 7px 14px;
+        font-size: 12px;
+      }
+      .rec button:hover { background: rgba(255, 255, 255, 0.2); }
+      @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.3 } }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script>
+      (function () {
+        var CHANNEL = "reppic-desktop-recording";
+        var root = document.getElementById("root");
+        var channel = new BroadcastChannel(CHANNEL);
+
+        function send(action) {
+          channel.postMessage({ type: "action", action: action });
+        }
+
+        function esc(s) {
+          return String(s).replace(/[&<>"]/g, function (c) {
+            return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+          });
+        }
+
+        // De teksten komen als `labels` mee over de BroadcastChannel, vertaald
+        // door de bridge in de taal van de gebruiker. Deze pagina is statisch en
+        // kent i18next niet; Nederlands is alleen de laatste terugval mocht er
+        // (nog) geen label meegestuurd zijn.
+        var FALLBACK = {
+          title: "Gesprek gedetecteerd",
+          subtitle:
+            "Wil je dit gesprek opnemen en laten analyseren? Zorg dat je gesprekspartner weet dat er wordt opgenomen.",
+          record: "Opnemen",
+          notNow: "Niet nu",
+          recording: "Opname loopt",
+          stop: "Stop",
+        };
+
+        function label(labels, key) {
+          return esc((labels && labels[key]) || FALLBACK[key]);
+        }
+
+        function render(state, labels) {
+          if (state === "recording") {
+            root.innerHTML =
+              '<div class="rec">' +
+              '<span class="dot"></span>' +
+              '<span class="label">' + label(labels, "recording") + "</span>" +
+              '<button id="stop">' + label(labels, "stop") + "</button>" +
+              "</div>";
+            document.getElementById("stop").onclick = function () { send("stop"); };
+            return;
+          }
+
+          if (state === "prompt") {
+            root.innerHTML =
+              '<div class="card">' +
+              '<div class="brand"><img src="/img/reppic_logo_email.png" alt="Reppic" /></div>' +
+              // Bewust zonder meeting-/platformnaam: één eenduidig venster
+              // voor Meet, Teams, Zoom en Slack.
+              '<p class="title">' + label(labels, "title") + "</p>" +
+              '<p class="sub">' + label(labels, "subtitle") + "</p>" +
+              '<div class="row">' +
+              '<button class="primary" id="rec">' + label(labels, "record") + "</button>" +
+              '<button class="secondary" id="no">' + label(labels, "notNow") + "</button>" +
+              "</div></div>";
+            document.getElementById("rec").onclick = function () { send("record"); };
+            document.getElementById("no").onclick = function () { send("dismiss"); };
+            return;
+          }
+
+          root.innerHTML = "";
+        }
+
+        channel.onmessage = function (event) {
+          var msg = event.data;
+          if (msg && msg.type === "state") render(msg.state, msg.labels);
+        };
+
+        // Vraag de actuele stand op (bijv. na herladen van dit venster).
+        channel.postMessage({ type: "chip-ready" });
+      })();
+    </script>
+  </body>
+</html>

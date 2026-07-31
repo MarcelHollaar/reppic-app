@@ -1,0 +1,16 @@
+{
+  "name": "reppic-desktop-shell",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lokale test-shell voor de Reppic Desktop Recording SDK-integratie (Recall.ai via @todesktop/plugin-recall). Voor productie-distributie wordt ToDesktop Builder gebruikt; deze shell bootst diens plugin-runtime na zodat de webapp-integratie 1-op-1 lokaal getest kan worden.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "@todesktop/plugin-recall": "^1.3.10"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0"
+  }
+}

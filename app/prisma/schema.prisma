@@ -1,0 +1,452 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  active
+  inactive
+}
+
+enum RoleStatus {
+  active
+  inactive
+}
+
+enum VideoStatus {
+  active
+  inactive
+}
+
+enum VideoType {
+  General
+  Example
+  Exercise
+}
+
+enum TranslationType {
+  video
+  category
+  tag
+}
+
+model User {
+  id             String     @id @default(uuid()) @map("id") @db.VarChar(40)
+  name           String     @map("name") @db.VarChar(100)
+  email          String     @unique @map("email") @db.VarChar(255)
+  password       String?    @map("password") @db.VarChar(255)
+  phone_number   String?    @map("phone_number") @db.VarChar(30)
+  created_at     DateTime   @default(now()) @map("created_at")
+  updated_at     DateTime   @updatedAt @map("updated_at")
+  is_verified    Boolean    @default(false) @map("is_verified")
+  status         UserStatus @map("status")
+  role_id        String     @map("role_id") @db.VarChar(40)
+  company_id     String?    @map("company_id") @db.VarChar(40)
+  avatar         String?    @map("avatar") @db.VarChar(255)
+  manager_id     String?    @map("manager_id") @db.VarChar(40)
+  password_token String?    @unique @map("password_token") @db.VarChar(255)
+  lang_code      String?    @default("en") @map("lang_code") @db.VarChar(10)
+
+  role                Role                @relation(fields: [role_id], references: [id])
+  company             Company?            @relation(fields: [company_id], references: [id])
+  manager             User?               @relation("UserManager", fields: [manager_id], references: [id]) // Direct manager
+  team                User[]              @relation("UserManager") // Users managed by this user
+  email_verifications EmailVerification[]
+  password_resets     PasswordReset[]
+  login_otps          LoginOtp[]
+  trusted_devices     TrustedDevice[]
+  user_settings       UserSetting[]
+  suggested_videos    SuggestedVideo[]
+  video_progress      VideoProgress[]
+  user_conversations  UserConversation[]
+  user_customers      Customer[]
+  notifications       Notification[]
+  uploaded_videos     Video[]             @relation("UploadedVideos")
+
+  @@map("users")
+}
+
+model Role {
+  id          String     @id @default(uuid()) @map("id") @db.VarChar(40)
+  name        String     @unique @map("name") @db.VarChar(100)
+  description String     @map("description") @db.VarChar(255)
+  status      RoleStatus @map("status")
+  created_at  DateTime   @default(now()) @map("created_at")
+  updated_at  DateTime   @updatedAt @map("updated_at")
+
+  users User[]
+
+  @@map("roles")
+}
+
+model EmailVerification {
+  id         String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  user_id    String   @map("user_id") @db.VarChar(40)
+  otp        String   @map("otp") @db.VarChar(6)
+  created_at DateTime @default(now()) @map("created_at")
+  expires_at DateTime @map("expires_at")
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("email_verifications")
+}
+
+model PasswordReset {
+  id         String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  user_id    String   @map("user_id") @db.VarChar(40)
+  otp        String   @map("otp") @db.VarChar(6)
+  created_at DateTime @default(now()) @map("created_at")
+  expires_at DateTime @map("expires_at")
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("password_resets")
+}
+
+model LoginOtp {
+  id         String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  // One live login-OTP per user. The unique constraint makes generation an
+  // atomic upsert, so a race or double login-submit can never leave two codes
+  // (which caused "first code rejected, second works").
+  user_id    String   @unique @map("user_id") @db.VarChar(40)
+  otp        String   @map("otp") @db.VarChar(6)
+  created_at DateTime @default(now()) @map("created_at")
+  expires_at DateTime @map("expires_at")
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("login_otps")
+}
+
+model TrustedDevice {
+  id         String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  user_id    String   @map("user_id") @db.VarChar(40)
+  token_hash String   @unique @map("token_hash") @db.VarChar(64)
+  created_at DateTime @default(now()) @map("created_at")
+  expires_at DateTime @map("expires_at")
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("trusted_devices")
+}
+
+model Customer {
+  id         String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  user_id    String?  @map("user_id") @db.VarChar(40)
+  name       String   @map("name") @db.VarChar(100)
+  created_at DateTime @default(now()) @map("created_at")
+  updated_at DateTime @updatedAt @map("updated_at")
+
+  user_conversations UserConversation[]
+  user               User?              @relation(fields: [user_id], references: [id])
+
+  @@map("customers")
+}
+
+model UserConversation {
+  id                     String    @id @default(uuid()) @map("id") @db.VarChar(40)
+  user_id                String    @map("user_id") @db.VarChar(40)
+  customer_id            String?   @map("customer_id") @db.VarChar(40)
+  title                  String?   @map("title") @db.VarChar(255)
+  file_path              String?   @map("file_path") @db.VarChar(255)
+  file_duration          Float?    @map("file_duration")
+  meeting_date           DateTime? @map("meeting_date")
+  meeting_time_start     String?   @map("meeting_time_start") @db.VarChar(5)
+  meeting_time_end       String?   @map("meeting_time_end") @db.VarChar(5)
+  twinai_run_id          String?   @map("twinai_run_id") @db.VarChar(255)
+  twinai_run_status      String?   @map("twinai_run_status") @db.VarChar(255)
+  evaluated_at           DateTime? @map("evaluated_at")
+  created_at             DateTime  @default(now()) @map("created_at")
+  updated_at             DateTime  @updatedAt @map("updated_at")
+  notes                  String?   @map("notes") @db.Text
+  conversation_status    String?   @map("conversation_status") @db.VarChar(50)
+  from_device_id         String?   @map("from_device_id") @db.VarChar(255)
+  transcript_text        String?   @map("transcript_text") @db.Text
+  transcript_status      String?   @default("pending") @map("transcript_status") @db.VarChar(50)
+  transcription_provider String?   @default("whisper") @map("transcription_provider") @db.VarChar(50)
+  audio_retention_until  DateTime? @map("audio_retention_until")
+  audio_deleted_at       DateTime? @map("audio_deleted_at")
+  is_merging_chunks      Boolean   @default(false) @map("is_merging_chunks")
+
+  customer                 Customer?              @relation(fields: [customer_id], references: [id])
+  user                     User                   @relation(fields: [user_id], references: [id])
+  conversation_summaries   ConversationSummary[]
+  conversation_summaries_x ConversationSummaryX[]
+
+  @@map("user_conversations")
+}
+
+model VideoCategory {
+  id          String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  name        String   @map("name") @db.VarChar(100)
+  slug        String   @map("slug") @db.VarChar(100)
+  description String?  @map("description") @db.VarChar(255)
+  created_at  DateTime @default(now()) @map("created_at")
+  updated_at  DateTime @updatedAt @map("updated_at")
+
+  @@map("video_categories")
+}
+
+model Video {
+  id               String      @id @default(uuid()) @map("id") @db.VarChar(40)
+  category_id      String      @map("category_id") @db.VarChar(40)
+  title            String      @map("title") @db.VarChar(255)
+  description      String?     @map("description")
+  thumbnail_path   String?     @map("thumbnail_path") @db.VarChar(255)
+  length           Int?        @map("length")
+  uploaded_by      String      @map("uploaded_by") @db.VarChar(40)
+  uploaded_by_user User        @relation("UploadedVideos", fields: [uploaded_by], references: [id])
+  status           VideoStatus @map("status")
+  phase            Int         @default(1) @map("phase")
+  number           String      @map("number") @db.VarChar(40)
+  type             VideoType   @default(General) @map("type")
+  embedded_code    String      @default("") @map("embedded_code") @db.Text
+  created_at       DateTime    @default(now()) @map("created_at")
+  updated_at       DateTime    @updatedAt @map("updated_at")
+  deleted_at       DateTime?   @map("deleted_at")
+
+  category         Category         @relation("CategoryRelation", fields: [category_id], references: [id])
+  tags             VideoTag[]       @relation("VideoTags")
+  suggested_videos SuggestedVideo[]
+  video_progress   VideoProgress[]
+
+  @@map("videos")
+}
+
+model SuggestedVideo {
+  id         String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  user_id    String   @map("user_id") @db.VarChar(40)
+  video_id   String   @map("video_id") @db.VarChar(40)
+  created_at DateTime @default(now()) @map("created_at")
+  updated_at DateTime @updatedAt @map("updated_at")
+
+  user  User  @relation(fields: [user_id], references: [id])
+  video Video @relation(fields: [video_id], references: [id])
+
+  @@map("suggested_videos")
+}
+
+model UserSetting {
+  id                   String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  user_id              String   @map("user_id") @db.VarChar(40)
+  notification_setting Json     @map("notification_setting")
+  created_at           DateTime @default(now()) @map("created_at")
+  updated_at           DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("user_settings")
+}
+
+model VideoProgress {
+  id         String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  user_id    String   @map("user_id") @db.VarChar(40)
+  video_id   String   @map("video_id") @db.VarChar(40)
+  progress   Float    @map("progress") // Progress in seconds or percentage
+  created_at DateTime @default(now()) @map("created_at")
+  updated_at DateTime @updatedAt @map("updated_at")
+
+  user  User  @relation(fields: [user_id], references: [id])
+  video Video @relation(fields: [video_id], references: [id])
+
+  @@map("video_progress")
+}
+
+model ConversationSummary {
+  id                           String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  conversation_id              String   @map("conversation_id") @db.VarChar(40)
+  title                        String?  @map("title") @db.Text
+  customer_type                String   @map("customer_type") @db.VarChar(50)
+  phases                       Json     @map("phases")
+  score                        Float    @map("score")
+  salesperson_speak_percentage Float    @map("salesperson_speak_percentage")
+  questions_asked              Int      @default(0) @map("questions_asked")
+  summary                      String   @map("summary") @db.Text
+  learning_points              Json     @map("learning_points")
+  custom_data                  Json     @map("custom_data")
+  created_at                   DateTime @default(now()) @map("created_at")
+  updated_at                   DateTime @updatedAt @map("updated_at")
+  atmosphere                   String?  @map("atmosphere") @db.VarChar(50)
+
+  user_conversation UserConversation @relation(fields: [conversation_id], references: [id])
+
+  @@map("conversation_summaries")
+}
+
+model ConversationSummaryX {
+  id                     String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  conversation_id        String   @map("conversation_id") @db.VarChar(40)
+  transcribed_text       String?  @map("transcribed_text") @db.Text
+  learning_points        String[] @map("learning_points")
+  mail_text              String?  @map("mail_text") @db.Text
+  summary_text           String?  @map("summary_text") @db.Text
+  resistance_text        String?  @map("resistance_text") @db.Text
+  salesperson_percentage Int?     @map("salesperson_percentage")
+  atmosphere             String?  @map("atmosphere") @db.VarChar(50)
+  total_score            Float?   @map("total_score")
+  phases                 Json?    @map("phases")
+  resistances            Json?    @map("resistances")
+  customer_type          String?  @map("customer_type") @db.VarChar(50)
+  // True when the analysis classified this as NOT an analyzable sales
+  // conversation. Such conversations must never count toward any assessment:
+  // excluded from the personal PICA dashboard and not pushed to the
+  // operational/strategic dashboards.
+  geen_salesgesprek      Boolean  @default(false) @map("geen_salesgesprek")
+  created_at             DateTime @default(now()) @map("created_at")
+  updated_at             DateTime @updatedAt @map("updated_at")
+
+  user_conversation UserConversation @relation(fields: [conversation_id], references: [id])
+
+  @@map("conversation_summaries_x")
+}
+
+model Notification {
+  id             String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  user_id        String   @map("user_id") @db.VarChar(40)
+  type           String   @map("type") @db.VarChar(50)
+  message        String   @map("message")
+  reference_id   String?  @map("reference_id") @db.VarChar(40)
+  reference_type String?  @map("reference_type") @db.VarChar(50)
+  is_read        Boolean  @default(false) @map("is_read")
+  created_at     DateTime @default(now()) @map("created_at")
+  updated_at     DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("notifications")
+}
+
+model Prompt {
+  id         String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  lang_code  String   @map("lang_code") @db.VarChar(10)
+  prompt     String   @map("prompt") @db.Text
+  created_at DateTime @default(now()) @map("created_at")
+  updated_at DateTime @updatedAt @map("updated_at")
+
+  @@index([lang_code], name: "idx_prompt_lang")
+  @@map("prompts")
+}
+
+model Company {
+  id             String @id @default(uuid()) @map("id") @db.VarChar(40)
+  title          String @map("title") @db.VarChar(100)
+  contact_person String @map("contact_person") @db.VarChar(100)
+  email          String @map("email") @db.VarChar(100)
+  phone          String @map("phone") @db.VarChar(100)
+  notes          String @map("notes") @db.Text
+  max_users      Int    @default(0) @map("max_users")
+
+  created_at DateTime @default(now()) @map("created_at")
+  updated_at DateTime @updatedAt @map("updated_at")
+
+  users User[]
+
+  @@unique([email, title], name: "email_title_unique")
+  @@map("companies")
+}
+
+model Category {
+  id         String    @id @default(uuid()) @map("id") @db.VarChar(40)
+  name       String    @map("name") @db.VarChar(150)
+  slug       String    @map("slug") @db.VarChar(100)
+  status     String    @default("active") @map("status") @db.VarChar(50)
+  created_at DateTime  @default(now()) @map("created_at")
+  updated_at DateTime  @updatedAt @map("updated_at")
+  deleted_at DateTime? @map("deleted_at")
+
+  videos Video[] @relation("CategoryRelation")
+
+  @@map("categories")
+}
+
+model Tag {
+  id         String    @id @default(uuid()) @map("id") @db.VarChar(40)
+  name       String    @map("name") @db.VarChar(150)
+  slug       String    @map("slug") @db.VarChar(100)
+  status     String    @default("active") @map("status") @db.VarChar(50)
+  created_at DateTime  @default(now()) @map("created_at")
+  updated_at DateTime  @updatedAt @map("updated_at")
+  deleted_at DateTime? @map("deleted_at")
+
+  videos VideoTag[] @relation("VideoTags")
+
+  @@map("tags")
+}
+
+model VideoTag {
+  id         String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  video_id   String   @map("video_id") @db.VarChar(40)
+  tag_id     String   @map("tag_id") @db.VarChar(40)
+  created_at DateTime @default(now()) @map("created_at")
+  updated_at DateTime @updatedAt @map("updated_at")
+
+  video Video @relation("VideoTags", fields: [video_id], references: [id])
+  tag   Tag   @relation("VideoTags", fields: [tag_id], references: [id])
+
+  @@unique([video_id, tag_id], name: "unique_video_tag")
+  @@map("video_tags")
+}
+
+model TitleTranslation {
+  id            String          @id @default(uuid()) @map("id") @db.VarChar(40)
+  lang_code     String          @map("lang_code") @db.VarChar(10)
+  type          TranslationType @map("type")
+  type_id       String          @map("type_id") @db.VarChar(50)
+  value         String          @map("value") @db.VarChar(50)
+  embedded_code String          @default("") @map("embedded_code") @db.Text
+  created_at    DateTime        @default(now()) @map("created_at")
+  updated_at    DateTime        @updatedAt @map("updated_at")
+  deleted_at    DateTime?       @map("deleted_at")
+
+  @@unique([type, type_id, lang_code], name: "type_type_id_lang_code")
+  @@map("title_translations")
+}
+
+model PlatformSetting {
+  key        String   @id @db.VarChar(64)
+  value      String   @db.VarChar(255)
+  updated_at DateTime @updatedAt
+
+  @@map("platform_settings")
+}
+
+model TranscriptAnalysisPromptVersion {
+  id         String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  version    Int      @map("version")
+  content    String   @map("content") @db.Text
+  is_active  Boolean  @default(false) @map("is_active")
+  note       String?  @map("note") @db.VarChar(500)
+  created_by String?  @map("created_by") @db.VarChar(40)
+  created_at DateTime @default(now()) @map("created_at")
+
+  @@unique([version], name: "transcript_analysis_prompt_version_unique")
+  @@index([is_active], name: "idx_transcript_analysis_prompt_active")
+  @@map("transcript_analysis_prompt_versions")
+}
+
+model DesktopSdkUpload {
+  id         String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  upload_id  String   @unique @map("upload_id") @db.VarChar(64)
+  user_id    String   @map("user_id") @db.VarChar(40)
+  status     String   @default("pending") @map("status") @db.VarChar(20)
+  created_at DateTime @default(now()) @map("created_at")
+
+  @@index([user_id], name: "idx_desktop_sdk_uploads_user")
+  @@map("desktop_sdk_uploads")
+}
+
+model CompanyTerminology {
+  id              String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  company_id      String   @unique @map("company_id") @db.VarChar(40)
+  mapping         Json     @map("mapping")
+  source_filename String?  @map("source_filename") @db.VarChar(255)
+  updated_by      String?  @map("updated_by") @db.VarChar(40)
+  created_at      DateTime @default(now()) @map("created_at")
+  updated_at      DateTime @updatedAt @map("updated_at")
+
+  @@map("company_terminology")
+}
