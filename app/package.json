@@ -52,6 +52,8 @@
     "i18next-fs-backend": "^2.6.0",
     "i18next-resources-to-backend": "^1.2.1",
     "jsonwebtoken": "^9.0.2",
+    "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.8",
     "loader-utils": "3.2.1",
     "lodash": "^4.17.21",
     "lucide-react": "^0.479.0",
