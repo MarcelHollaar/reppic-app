@@ -13,6 +13,11 @@ import {
 } from "../utils/urlHelper";
 import { wrapConversationSummaryEmailHtml } from "../utils/conversationSummaryEmailHtml";
 import {
+  buildPrepEmailHtml,
+  buildPrepEmailText,
+  type PrepEmailParams,
+} from "../utils/prepEmailHtml";
+import {
   buildConversationReportMailParts,
   type ConversationReportMailPayload,
 } from "./conversationReportMail";
@@ -266,6 +271,49 @@ class MailService {
     };
 
     await this.transporter.sendMail(mailOptions);
+  }
+
+  /**
+   * Gespreksvoorbereiding: mailt de verkoper de prep-briefing vóór een
+   * vervolgafspraak. HTML + tekst worden opgebouwd in prepEmailHtml.ts;
+   * hier alleen i18n-labels, wrapper en verzending.
+   */
+  async sendMeetingPrepEmailToUser(params: {
+    lang: string;
+    appName: string;
+    emailFrom: string;
+    userEmail: string;
+    appUrl: string;
+    prep: PrepEmailParams;
+  }) {
+    await i18next.changeLanguage(params.lang);
+
+    const labels = {
+      intro: i18next.t("emails.prepIntro", {
+        userName: params.prep.userName,
+        appName: params.appName,
+      }),
+      meetingAt: i18next.t("emails.prepMeetingAt"),
+      goalTitle: i18next.t("emails.prepGoalTitle"),
+      missedTitle: i18next.t("emails.prepMissedTitle"),
+      resistancesTitle: i18next.t("emails.prepResistancesTitle"),
+      questionsTitle: i18next.t("emails.prepQuestionsTitle"),
+      dealTitle: i18next.t("emails.prepDealTitle"),
+      attentionTitle: i18next.t("emails.prepAttentionTitle"),
+      previousConversation: i18next.t("emails.prepPreviousConversation"),
+    };
+
+    const subject = i18next.t("emails.prepSubject", {
+      meetingTitle: params.prep.meetingTitle,
+    });
+
+    await this.transporter.sendMail({
+      from: `"${params.appName}" <${params.emailFrom}>`,
+      to: params.userEmail,
+      subject,
+      text: buildPrepEmailText(params.prep, labels),
+      html: wrapEmailHtml(buildPrepEmailHtml(params.prep, labels), params.appUrl),
+    });
   }
 
   async sendConversationReportEmailToUser(

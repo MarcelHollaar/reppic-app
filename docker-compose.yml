@@ -51,6 +51,14 @@ services:
         - NEXT_PUBLIC_DASHBOARD_API_URL=${NEXT_PUBLIC_DASHBOARD_API_URL}
         - DASHBOARD_API_URL=${DASHBOARD_API_URL:-http://dashboard-backend:5001}
         - CRON_SECRET=${CRON_SECRET}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - HUBSPOT_CLIENT_ID=${HUBSPOT_CLIENT_ID}
+      - HUBSPOT_CLIENT_SECRET=${HUBSPOT_CLIENT_SECRET}
+      - HUBSPOT_REDIRECT_URI=${HUBSPOT_REDIRECT_URI}
+        - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+        - HUBSPOT_CLIENT_ID=${HUBSPOT_CLIENT_ID}
+        - HUBSPOT_CLIENT_SECRET=${HUBSPOT_CLIENT_SECRET}
+        - HUBSPOT_REDIRECT_URI=${HUBSPOT_REDIRECT_URI}
     depends_on:
       db:
         condition: "service_healthy"
@@ -145,6 +153,7 @@ services:
       - |
         apk add --no-cache curl > /dev/null
         echo "0 3 * * 0 curl -sf -H \"Authorization: Bearer $$CRON_SECRET\" \"$$APP_BASE_URL/api/cron/cleanup-recordings\" >> /var/log/cron.log 2>&1" > /etc/crontabs/root
+        echo "5 * * * * curl -sf -m 290 -H \"Authorization: Bearer $$CRON_SECRET\" \"$$APP_BASE_URL/api/cron/prepare-followups\" >> /var/log/cron.log 2>&1" >> /etc/crontabs/root
         crond -f -l 2
     networks:
       - nginx-proxy-manager_default

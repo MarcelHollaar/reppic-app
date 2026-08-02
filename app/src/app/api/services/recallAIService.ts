@@ -240,6 +240,46 @@ export class RecallAIService {
   }
 
   /**
+   * Gespreksvoorbereiding: aankomende agenda-afspraken van een gebruiker
+   * (zelfde stateless auth als getCalendarMeetingDetails; Reppic user-id =
+   * Recall external_id). Gedocumenteerde filters: start_time_after/-before.
+   * Rate-limit: 120 req/min per calendar_user. Een gebruiker zonder
+   * gekoppelde agenda levert een error op — de caller behandelt dat als
+   * "geen meetings" (iterate-and-try, zie bouwplan A2).
+   */
+  static async listUpcomingCalendarMeetings(
+    userId: string,
+    windowStart: Date,
+    windowEnd: Date
+  ): Promise<RecallCalendarDetails[]> {
+    const userToken = await this.getCalendarAuthToken(userId);
+    const url = new URL(`${RECALL_BASE_URL}/api/v1/calendar/meetings/`);
+    url.searchParams.set("start_time_after", windowStart.toISOString());
+    url.searchParams.set("start_time_before", windowEnd.toISOString());
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        "x-recallcalendarauthtoken": userToken,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `List calendar meetings failed: ${response.status} ${errorText}`
+      );
+    }
+
+    const data = await response.json();
+    // Response is een array; verdedig tegen een eventuele {results: []}-wrapper.
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.results)) return data.results;
+    return [];
+  }
+
+  /**
    * Creates a Desktop Recording SDK upload. The returned upload_token is handed
    * to the desktop app, which passes it to RecallAiSdk.startRecording(). The
    * Reppic user id travels along as metadata so the sdk_upload.complete webhook

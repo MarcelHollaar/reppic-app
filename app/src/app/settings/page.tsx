@@ -3,6 +3,8 @@ import AdminsListing from "@/components/settings/AdminsListing";
 import AnalysisModelComponent from "@/components/settings/AnalysisModelComponent";
 import DashboardModelComponent from "@/components/settings/DashboardModelComponent";
 import TranscriptAnalysisPromptComponent from "@/components/settings/TranscriptAnalysisPromptComponent";
+import HubspotConnectionComponent from "@/components/settings/HubspotConnectionComponent";
+import PrepAnalysisPromptComponent from "@/components/settings/PrepAnalysisPromptComponent";
 import LanguageSettings from "@/components/settings/LanguageComponent";
 import NotificationSettings from "@/components/settings/NotificationComponent";
 import PasswordUpdateForm from "@/components/settings/PasswordResetComponent";
@@ -35,6 +37,15 @@ function SettingsPage() {
     });
   }
 
+  // HubSpot-koppeling: company-admin (manager) én superadmin.
+  if (userRole === USER_ROLE.MANAGER || userRole === USER_ROLE.SUPER_ADMIN) {
+    dynamicTabs.push({
+      label: t("settings.integrations"),
+      value: "integrations",
+      component: <HubspotConnectionComponent />,
+    });
+  }
+
   if (userRole === USER_ROLE.SUPER_ADMIN) {
     dynamicTabs.push({
       label: t("settings.analysisModel"),
@@ -50,6 +61,11 @@ function SettingsPage() {
       label: t("settings.transcriptAnalysisPrompt"),
       value: "transcript-analysis-prompt",
       component: <TranscriptAnalysisPromptComponent />,
+    });
+    dynamicTabs.push({
+      label: t("settings.prepAnalysisPrompt"),
+      value: "prep-analysis-prompt",
+      component: <PrepAnalysisPromptComponent />,
     });
     dynamicTabs.push({
       label: t("common.admins"),
