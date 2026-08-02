@@ -1,10 +1,8 @@
 /**
  * Server-side PDF-bouwer voor het maandelijkse manager-rapport (Node, jsPDF).
  *
- * Afgeleid van de browser-versie in dashboard-backend (reportBuilder.ts), maar
- * server-geschikt gemaakt: het logo wordt van schijf gelezen i.p.v. via een
- * browser-fetch, en de functie geeft PDF-bytes (Buffer) terug i.p.v. een
- * download te triggeren. Eén gecombineerde PDF met alle dashboard-blokken.
+ * Professioneel, strak design: proportioneel logo, gekaderde onderwerpen (cards),
+ * KPI-tegels en een rustige typografische hiërarchie. Logo van schijf, bytes terug.
  */
 
 import fs from "node:fs";
@@ -13,7 +11,6 @@ import { jsPDF } from "jspdf";
 import autoTableImport from "jspdf-autotable";
 import type { DashboardReport, ReportSection } from "./reportSections";
 
-// jspdf-autotable exporteert als default; robuust ophalen.
 const autoTable = (autoTableImport as unknown as { default?: typeof autoTableImport })
   .default ?? (autoTableImport as unknown as typeof autoTableImport);
 
@@ -43,10 +40,18 @@ export type BuildPdfParams = {
   labels: PdfStructuralLabels;
 };
 
-const PRIMARY: [number, number, number] = [88, 112, 246]; // #5870f6 (Reppic-blauw)
-const SECONDARY: [number, number, number] = [52, 73, 94];
-const LIGHT: [number, number, number] = [236, 240, 241];
-const TEXT: [number, number, number] = [44, 62, 80];
+// ── Palet (Reppic-huisstijl) ──────────────────────────────────────────────
+type RGB = [number, number, number];
+const BLUE: RGB = [88, 112, 246]; // #5870f6
+const BLUE_DK: RGB = [67, 83, 232];
+const INK: RGB = [30, 41, 59]; // slate-800
+const MUTED: RGB = [100, 116, 139]; // slate-500
+const CARD_BG: RGB = [248, 250, 252]; // slate-50
+const BORDER: RGB = [226, 232, 240]; // slate-200
+const GREEN: RGB = [22, 163, 74];
+const RED: RGB = [220, 38, 38];
+
+const LOGO_RATIO = 248 / 79; // echte pixelverhouding van reppic_logo_email.png
 
 let cachedLogo: string | null | undefined;
 function logoDataUrl(): string | null {
@@ -63,198 +68,310 @@ function logoDataUrl(): string | null {
 export function buildMonthlyReportPdf(params: BuildPdfParams): Buffer {
   const { companyTitle, periodLabel, generatedOnText, blocks, labels: t } = params;
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 20;
-  const contentWidth = pageWidth - margin * 2;
+  const PW = pdf.internal.pageSize.getWidth();
+  const PH = pdf.internal.pageSize.getHeight();
+  const M = 18; // paginamarge
+  const CW = PW - M * 2; // inhoudsbreedte
   const logo = logoDataUrl();
-  let currentY = margin;
+  let y = M;
 
-  const pageBreak = (need: number) => currentY + need > pageHeight - 25;
+  const setFill = (c: RGB) => pdf.setFillColor(c[0], c[1], c[2]);
+  const setText = (c: RGB) => pdf.setTextColor(c[0], c[1], c[2]);
+  const setDraw = (c: RGB) => pdf.setDrawColor(c[0], c[1], c[2]);
+  const LH = 4.8; // regelhoogte bij 10pt
 
-  function header(title: string) {
-    pdf.setFillColor(...PRIMARY);
-    pdf.rect(0, 0, pageWidth, 15, "F");
-    if (logo) {
-      try {
-        pdf.addImage(logo, "PNG", 5, 2.5, 10, 10);
-      } catch {
-        /* logo optioneel */
-      }
-    }
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(10);
-    pdf.setFont("helvetica", "bold");
-    pdf.text(t.reportTitle, logo ? 18 : margin, 9.5);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(title, pageWidth - margin, 9.5, { align: "right" });
-    currentY = 25;
-  }
+  // De standaard jsPDF-fonts (WinAnsi) kennen ▲ ▼ → − niet → saneren naar
+  // veilige glyphs. Richting wordt in de tegels al via kleur getoond.
+  const safe = (s: unknown) =>
+    String(s ?? "")
+      .replace(/[▲▼]\s*/g, "")
+      .replace(/→/g, "»")
+      .replace(/−/g, "-");
 
-  function newPage(title: string) {
-    pdf.addPage();
-    header(title);
-  }
-
-  function sectionTitle(title: string) {
-    if (pageBreak(20)) newPage(companyTitle);
-    pdf.setFillColor(...SECONDARY);
-    pdf.rect(margin, currentY, 4, 8, "F");
-    pdf.setTextColor(...SECONDARY);
-    pdf.setFontSize(13);
-    pdf.setFont("helvetica", "bold");
-    pdf.text(title, margin + 8, currentY + 6);
-    currentY += 14;
-  }
-
-  function metricsSection(s: Extract<ReportSection, { type: "metrics" }>) {
-    sectionTitle(s.title);
-    if (!s.data.length) return emptyLine();
-    // Maand-op-maand kolom alleen tonen als minstens één tegel een delta heeft
-    // (eerste rapportperiode heeft er geen).
-    const withDelta = s.data.some((m) => m.delta !== undefined);
-    autoTable(pdf, {
-      startY: currentY,
-      head: [withDelta ? [t.metric, t.value, t.vsLastMonth] : [t.metric, t.value]],
-      body: s.data.map((m) =>
-        withDelta
-          ? [m.label, String(m.value), m.delta ?? ""]
-          : [m.label, String(m.value)],
-      ),
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 9, cellPadding: 3.5, textColor: TEXT },
-      headStyles: { fillColor: PRIMARY, textColor: [255, 255, 255], fontStyle: "bold" },
-      alternateRowStyles: { fillColor: [248, 249, 250] },
-      columnStyles: withDelta
-        ? {
-            1: { halign: "right", cellWidth: contentWidth * 0.25 },
-            2: { halign: "right", cellWidth: contentWidth * 0.25 },
-          }
-        : { 1: { halign: "right", cellWidth: contentWidth * 0.35 } },
-    });
-    currentY = (pdf as any).lastAutoTable.finalY + 12;
-  }
-
-  function tableSection(s: Extract<ReportSection, { type: "table" }>) {
-    sectionTitle(s.title);
-    if (!s.data.length) return emptyLine();
-    const total = s.data.reduce((sum, i) => sum + i.value, 0);
-    const body = s.data.map((i) => {
-      const pct =
-        i.percentage !== undefined
-          ? `${i.percentage.toFixed(1)}%`
-          : total > 0
-            ? `${((i.value / total) * 100).toFixed(1)}%`
-            : "0%";
-      return [i.name, String(i.value), pct];
-    });
-    autoTable(pdf, {
-      startY: currentY,
-      head: [[t.category, t.value, t.percentage]],
-      body,
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 9, cellPadding: 3.5, textColor: TEXT },
-      headStyles: { fillColor: PRIMARY, textColor: [255, 255, 255], fontStyle: "bold" },
-      alternateRowStyles: { fillColor: [248, 249, 250] },
-    });
-    currentY = (pdf as any).lastAutoTable.finalY + 12;
-  }
-
-  function textSection(s: Extract<ReportSection, { type: "text" }>) {
-    sectionTitle(s.title);
-    if (!s.data) return emptyLine();
-    pdf.setTextColor(...TEXT);
-    pdf.setFontSize(10);
-    pdf.setFont("helvetica", "normal");
-    const lines = pdf.splitTextToSize(s.data, contentWidth);
-    if (pageBreak(lines.length * 5 + 8)) newPage(companyTitle);
-    pdf.text(lines, margin, currentY);
-    currentY += lines.length * 5 + 10;
-  }
-
-  function listSection(s: Extract<ReportSection, { type: "list" }>) {
-    sectionTitle(s.title);
-    if (!s.data.length) return emptyLine();
-    pdf.setTextColor(...TEXT);
-    pdf.setFontSize(10);
-    pdf.setFont("helvetica", "normal");
-    for (const item of s.data) {
-      const lines = pdf.splitTextToSize(item, contentWidth - 6);
-      if (pageBreak(lines.length * 5 + 4)) newPage(companyTitle);
-      pdf.setFillColor(...PRIMARY);
-      pdf.circle(margin + 1.2, currentY - 1.3, 0.9, "F"); // bullet
-      pdf.text(lines, margin + 6, currentY);
-      currentY += lines.length * 5 + 3;
-    }
-    currentY += 7;
-  }
-
-  function emptyLine() {
-    pdf.setTextColor(150, 150, 150);
-    pdf.setFontSize(10);
-    pdf.text(t.noData, margin, currentY);
-    currentY += 10;
-  }
-
-  // --- Cover ---
-  pdf.setFillColor(...PRIMARY);
-  pdf.rect(0, 0, pageWidth, 80, "F");
-  pdf.setFillColor(...LIGHT);
-  pdf.rect(0, 80, pageWidth, pageHeight - 80, "F");
-  if (logo) {
+  function drawLogo(x: number, top: number, h: number) {
+    if (!logo) return;
     try {
-      pdf.addImage(logo, "PNG", margin, 16, 28, 28);
+      pdf.addImage(logo, "PNG", x, top, h * LOGO_RATIO, h);
     } catch {
       /* logo optioneel */
     }
   }
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(26);
-  pdf.setFont("helvetica", "bold");
-  pdf.text(t.reportTitle, pageWidth / 2, 40, { align: "center" });
-  pdf.setTextColor(...TEXT);
-  pdf.setFontSize(22);
-  pdf.text(companyTitle, pageWidth / 2, 120, { align: "center" });
-  pdf.setFillColor(...PRIMARY);
-  pdf.rect(margin, 135, contentWidth, 0.5, "F");
-  pdf.setFontSize(12);
-  pdf.setTextColor(...SECONDARY);
-  pdf.setFont("helvetica", "normal");
-  pdf.text(`${t.period}: ${periodLabel}`, pageWidth / 2, 155, { align: "center" });
-  pdf.text(`${t.generatedOn}: ${generatedOnText}`, pageWidth / 2, 165, { align: "center" });
-  pdf.setFontSize(10);
-  pdf.setTextColor(150, 150, 150);
-  pdf.text(t.confidential, pageWidth / 2, pageHeight - 18, { align: "center" });
 
-  // --- Blokken (operationeel, strategisch) ---
-  for (const block of blocks) {
-    newPage(block.heading);
-    // Bloktitel prominent bovenaan de eerste pagina van het blok.
-    pdf.setTextColor(...PRIMARY);
-    pdf.setFontSize(16);
-    pdf.setFont("helvetica", "bold");
-    pdf.text(block.heading, margin, currentY + 4);
-    currentY += 14;
-    for (const section of block.sections) {
-      if (section.type === "metrics") metricsSection(section);
-      else if (section.type === "table") tableSection(section);
-      else if (section.type === "list") listSection(section);
-      else textSection(section);
+  function need(space: number) {
+    if (y + space > PH - 20) {
+      pdf.addPage();
+      pageHeader();
     }
   }
 
-  // --- Footers ---
-  const totalPages = pdf.getNumberOfPages();
-  for (let i = 2; i <= totalPages; i++) {
-    pdf.setPage(i);
-    pdf.setFillColor(...LIGHT);
-    pdf.rect(0, pageHeight - 12, pageWidth, 12, "F");
-    pdf.setTextColor(...SECONDARY);
-    pdf.setFontSize(9);
-    pdf.text(`${t.page} ${i - 1} ${t.of} ${totalPages - 1}`, pageWidth / 2, pageHeight - 5, {
-      align: "center",
+  // Slanke, elegante paginakop (op elke inhoudspagina).
+  function pageHeader() {
+    drawLogo(M, 12, 6);
+    setText(MUTED);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+    pdf.text(safe(companyTitle), PW - M, 15.5, { align: "right" });
+    setDraw(BORDER);
+    pdf.setLineWidth(0.3);
+    pdf.line(M, 20, PW - M, 20);
+    y = 28;
+  }
+
+  // Hoofdstuk-titel (per blok): accentbalkje + grote titel.
+  function chapter(title: string) {
+    need(18);
+    setFill(BLUE);
+    pdf.roundedRect(M, y, 3.5, 9, 1, 1, "F");
+    setText(INK);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(16);
+    pdf.text(safe(title), M + 8, y + 7);
+    y += 15;
+  }
+
+  // Sectiekop binnen een blok.
+  function sectionTitle(title: string) {
+    need(12);
+    setText(BLUE_DK);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.text(safe(title).toUpperCase(), M, y + 4);
+    y += 8;
+  }
+
+  function measure(text: string, width: number, size: number): string[] {
+    pdf.setFontSize(size);
+    return pdf.splitTextToSize(safe(text), width);
+  }
+
+  // Gekaderde tekstkaart (voor de managementsamenvatting-onderdelen + conclusies).
+  function paragraphCard(title: string, body: string) {
+    const pad = 5;
+    const innerW = CW - pad * 2;
+    const bodyLines = measure(body, innerW, 10);
+    const cardH = pad + 5.5 + bodyLines.length * LH + pad;
+    need(cardH + 4);
+    setFill(CARD_BG);
+    setDraw(BORDER);
+    pdf.setLineWidth(0.3);
+    pdf.roundedRect(M, y, CW, cardH, 2.5, 2.5, "FD");
+    // accent links
+    setFill(BLUE);
+    pdf.rect(M, y + 2.5, 1.4, cardH - 5, "F");
+    // label
+    setText(BLUE_DK);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9.5);
+    pdf.text(safe(title), M + pad, y + pad + 2);
+    // body
+    setText(INK);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    pdf.text(bodyLines, M + pad, y + pad + 7);
+    y += cardH + 4;
+  }
+
+  // Gekaderde bullet-lijst (Kansen / Aandachtspunten).
+  function listCard(title: string, items: string[], accent: RGB) {
+    sectionTitle(title);
+    const pad = 5;
+    const innerW = CW - pad * 2 - 4;
+    const wrapped = items.map((it) => measure(it, innerW, 10));
+    const cardH = pad + wrapped.reduce((s, l) => s + l.length * LH + 2, 0) + pad - 2;
+    need(cardH + 4);
+    setFill([255, 255, 255]);
+    setDraw(BORDER);
+    pdf.setLineWidth(0.3);
+    pdf.roundedRect(M, y, CW, cardH, 2.5, 2.5, "FD");
+    let ly = y + pad + 2;
+    for (const lines of wrapped) {
+      setFill(accent);
+      pdf.circle(M + pad + 0.6, ly - 1.3, 1, "F");
+      setText(INK);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+      pdf.text(lines, M + pad + 4, ly);
+      ly += lines.length * LH + 2;
+    }
+    y += cardH + 4;
+  }
+
+  const deltaColor = (d: string): RGB =>
+    d.startsWith("▲") ? GREEN : d.startsWith("▼") ? RED : MUTED;
+
+  // KPI-tegels (3 per rij, gekaderd).
+  function kpiTiles(
+    tiles: { label: string; value: string | number; delta?: string }[],
+  ) {
+    const perRow = 3;
+    const gap = 4;
+    const tileW = (CW - gap * (perRow - 1)) / perRow;
+    const tileH = 24;
+    for (let i = 0; i < tiles.length; i += perRow) {
+      const row = tiles.slice(i, i + perRow);
+      need(tileH + 4);
+      row.forEach((tile, j) => {
+        const x = M + j * (tileW + gap);
+        setFill([255, 255, 255]);
+        setDraw(BORDER);
+        pdf.setLineWidth(0.3);
+        pdf.roundedRect(x, y, tileW, tileH, 2.5, 2.5, "FD");
+        setText(BLUE);
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(17);
+        pdf.text(safe(tile.value), x + tileW / 2, y + 11, { align: "center" });
+        if (tile.delta) {
+          // Kleur uit het originele teken; tekst gesaneerd naar "+N"/"-N".
+          setText(deltaColor(tile.delta));
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(8.5);
+          pdf.text(safe(tile.delta), x + tileW / 2, y + 16, { align: "center" });
+        }
+        setText(MUTED);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(7.8);
+        const lbl = pdf.splitTextToSize(safe(tile.label), tileW - 4);
+        pdf.text(lbl.slice(0, 2), x + tileW / 2, y + 20, { align: "center" });
+      });
+      y += tileH + gap;
+    }
+    y += 2;
+  }
+
+  function dataTable(title: string, rows: string[][], head: string[]) {
+    sectionTitle(title);
+    need(16);
+    autoTable(pdf, {
+      startY: y,
+      head: [head.map(safe)],
+      body: rows.map((r) => r.map(safe)),
+      margin: { left: M, right: M },
+      theme: "grid",
+      styles: {
+        fontSize: 9,
+        cellPadding: 3,
+        textColor: INK,
+        lineColor: BORDER,
+        lineWidth: 0.2,
+      },
+      headStyles: {
+        fillColor: BLUE,
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+        halign: "left",
+      },
+      alternateRowStyles: { fillColor: [250, 251, 253] },
+      columnStyles: {
+        1: { halign: "right", cellWidth: 24 },
+        2: { halign: "right", cellWidth: 26 },
+      },
     });
-    pdf.text(t.confidential, pageWidth - margin, pageHeight - 5, { align: "right" });
+    y = ((pdf as any).lastAutoTable?.finalY ?? y) + 8;
+  }
+
+  function noData() {
+    setText(MUTED);
+    pdf.setFont("helvetica", "italic");
+    pdf.setFontSize(9);
+    pdf.text(t.noData, M, y + 3);
+    y += 8;
+  }
+
+  // ── COVER ─────────────────────────────────────────────────────────────
+  drawLogo(M, 22, 12);
+  setDraw(BORDER);
+  pdf.setLineWidth(0.4);
+  pdf.line(M, 42, PW - M, 42);
+
+  setText(INK);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(30);
+  pdf.text(t.reportTitle, M, 92);
+  setText(BLUE);
+  pdf.setFontSize(20);
+  pdf.text(safe(companyTitle), M, 104);
+
+  // Info-kaart
+  const cy = 120;
+  setFill(CARD_BG);
+  setDraw(BORDER);
+  pdf.setLineWidth(0.3);
+  pdf.roundedRect(M, cy, CW, 30, 3, 3, "FD");
+  setText(MUTED);
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9);
+  pdf.text(t.period.toUpperCase(), M + 8, cy + 10);
+  pdf.text(t.generatedOn.toUpperCase(), M + 8 + CW / 2, cy + 10);
+  setText(INK);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(12);
+  pdf.text(periodLabel, M + 8, cy + 18);
+  pdf.text(generatedOnText, M + 8 + CW / 2, cy + 18);
+
+  setText(MUTED);
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(8);
+  pdf.text(t.confidential, M, PH - 16);
+
+  // ── INHOUD ────────────────────────────────────────────────────────────
+  for (const block of blocks) {
+    pdf.addPage();
+    pageHeader();
+    chapter(block.heading);
+    for (const section of block.sections) {
+      if (section.type === "metrics") {
+        if (!section.data.length) {
+          sectionTitle(section.title);
+          noData();
+        } else {
+          sectionTitle(section.title);
+          kpiTiles(section.data);
+        }
+      } else if (section.type === "table") {
+        if (!section.data.length) {
+          sectionTitle(section.title);
+          noData();
+          continue;
+        }
+        const total = section.data.reduce((s, i) => s + i.value, 0);
+        const rows = section.data.map((i) => {
+          const pct =
+            i.percentage !== undefined
+              ? `${i.percentage.toFixed(0)}%`
+              : total > 0
+                ? `${((i.value / total) * 100).toFixed(0)}%`
+                : "0%";
+          return [i.name, String(i.value), pct];
+        });
+        dataTable(section.title, rows, [t.category, t.value, t.percentage]);
+      } else if (section.type === "list") {
+        if (!section.data.length) continue;
+        const accent = /watch|aandacht|attenzione|attention|atención|achtung/i.test(
+          section.title,
+        )
+          ? RED
+          : GREEN;
+        listCard(section.title, section.data, accent);
+      } else {
+        paragraphCard(section.title, section.data);
+      }
+    }
+  }
+
+  // ── FOOTERS ───────────────────────────────────────────────────────────
+  const total = pdf.getNumberOfPages();
+  for (let i = 2; i <= total; i++) {
+    pdf.setPage(i);
+    setDraw(BORDER);
+    pdf.setLineWidth(0.3);
+    pdf.line(M, PH - 12, PW - M, PH - 12);
+    setText(MUTED);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+    pdf.text(t.confidential, M, PH - 7);
+    pdf.text(`${t.page} ${i - 1} ${t.of} ${total - 1}`, PW - M, PH - 7, {
+      align: "right",
+    });
   }
 
   return Buffer.from(pdf.output("arraybuffer"));
