@@ -16,9 +16,12 @@ import {
   hasReportData,
   mapOperational,
   mapStrategic,
+  opCoreMetrics,
+  stratCoreMetrics,
   type ReportLabels,
 } from "./reportSections";
 import { buildMonthlyReportPdf, type PdfStructuralLabels } from "./reportPdf";
+import { generateMonthOverMonthNarrative } from "./monthOverMonthNarrative";
 
 const SUPPORTED_LANGS = ["nl", "en", "de", "fr", "es", "it"];
 const LOCALE_MAP: Record<string, string> = {
@@ -40,6 +43,15 @@ export function previousMonth(now: Date): {
   const year = d.getFullYear();
   const month = d.getMonth() + 1;
   return { year, month, periodKey: `${year}-${String(month).padStart(2, "0")}` };
+}
+
+/** De maand vóór (year, month) — voor de maand-op-maand vergelijking. */
+export function monthBefore(
+  year: number,
+  month: number,
+): { year: number; month: number } {
+  const d = new Date(year, month - 2, 1);
+  return { year: d.getFullYear(), month: d.getMonth() + 1 };
 }
 
 /** "juli 2026" in de taal van de ontvanger. */
@@ -68,6 +80,7 @@ async function labelsFor(lang: string): Promise<{
     "topNeeds", "trendsConclusion", "topIssues", "satisfactionConclusion",
     "competitors", "strengths", "competitionConclusion", "execution",
     "resonance", "propositionConclusion",
+    "biggestMovers", "planBasisNote", "momNarrativeHeading",
   ];
   const report: ReportLabels = {};
   for (const k of reportKeys) report[k] = t(k);
@@ -84,6 +97,7 @@ async function labelsFor(lang: string): Promise<{
     noData: t("noData"),
     page: t("page"),
     of: t("of"),
+    vsLastMonth: t("vsLastMonth"),
   };
   return { report, pdf };
 }
@@ -183,9 +197,15 @@ export async function runMonthlyManagerReports(options: {
       }
 
       // Dashboard-snapshots zijn per taal opgeslagen; haal per benodigde taal
-      // op zodat elke manager ziet wat zijn eigen dashboard toont.
+      // op zodat elke manager ziet wat zijn eigen dashboard toont. Voor de
+      // maand-op-maand vergelijking halen we óók de maand ervoor op.
+      const prevPeriod = monthBefore(year, month);
       const langs = [...new Set(managers.map((m) => normalizeLang(m.lang_code)))];
       const perLang = new Map<
+        string,
+        Awaited<ReturnType<typeof fetchCompanyDashboards>>
+      >();
+      const perLangPrev = new Map<
         string,
         Awaited<ReturnType<typeof fetchCompanyDashboards>>
       >();
@@ -194,7 +214,21 @@ export async function runMonthlyManagerReports(options: {
           lang,
           await fetchCompanyDashboards(company.id, lang, year, month),
         );
+        perLangPrev.set(
+          lang,
+          await fetchCompanyDashboards(
+            company.id,
+            lang,
+            prevPeriod.year,
+            prevPeriod.month,
+          ),
+        );
       }
+      // AI-duiding één keer per taal (niet per manager) — en niet bij dryRun.
+      const narrativeCache = new Map<
+        string,
+        { operational: string; strategic: string }
+      >();
 
       // Bedrijf zonder data in de periode (in élke gebruikte taal) → geen mail.
       const anyData = [...perLang.values()].some((d) =>
@@ -220,14 +254,65 @@ export async function runMonthlyManagerReports(options: {
           continue;
         }
 
+        const prevData = perLangPrev.get(lang);
+        const hasPrev =
+          !!prevData && hasReportData(prevData.operational, prevData.strategic);
+
         const { report: L, pdf: pdfLabels } = await labelsFor(lang);
-        const opBlock = mapOperational(data.operational, L);
-        const stratBlock = mapStrategic(data.strategic, L);
+        const opBlock = mapOperational(
+          data.operational,
+          L,
+          hasPrev ? prevData.operational : undefined,
+        );
+        const stratBlock = mapStrategic(
+          data.strategic,
+          L,
+          hasPrev ? prevData.strategic : undefined,
+        );
         const period = periodLabel(year, month, lang);
 
         if (options.dryRun) {
           entry.recipients.push(`${manager.email} (dryRun)`);
           continue;
+        }
+
+        // Maand-op-maand AI-duiding (alleen als er een vorige maand is);
+        // fail-open — lege strings laten het rapport gewoon doorgaan.
+        let narrative = narrativeCache.get(lang);
+        if (!narrative && hasPrev) {
+          narrative = await generateMonthOverMonthNarrative({
+            lang,
+            periodLabel: period,
+            prevPeriodLabel: periodLabel(
+              prevPeriod.year,
+              prevPeriod.month,
+              lang,
+            ),
+            operational: {
+              current: opCoreMetrics(data.operational),
+              previous: opCoreMetrics(prevData.operational),
+            },
+            strategic: {
+              current: stratCoreMetrics(data.strategic),
+              previous: stratCoreMetrics(prevData.strategic),
+            },
+          });
+          narrativeCache.set(lang, narrative);
+        }
+        if (narrative?.operational) {
+          // Ná kerncijfers (+ evt. movers) in de PDF.
+          opBlock.sections.splice(hasPrev ? 2 : 1, 0, {
+            title: L.momNarrativeHeading,
+            type: "text",
+            data: narrative.operational,
+          });
+        }
+        if (narrative?.strategic) {
+          stratBlock.sections.splice(hasPrev ? 2 : 1, 0, {
+            title: L.momNarrativeHeading,
+            type: "text",
+            data: narrative.strategic,
+          });
         }
 
         const pdf = buildMonthlyReportPdf({
@@ -254,8 +339,16 @@ export async function runMonthlyManagerReports(options: {
           periodLabel: period,
           lang,
           blocks: [
-            { heading: opBlock.heading, highlights: opBlock.highlights },
-            { heading: stratBlock.heading, highlights: stratBlock.highlights },
+            {
+              heading: opBlock.heading,
+              highlights: opBlock.highlights,
+              momSummary: narrative?.operational || undefined,
+            },
+            {
+              heading: stratBlock.heading,
+              highlights: stratBlock.highlights,
+              momSummary: narrative?.strategic || undefined,
+            },
           ],
           pdf,
           pdfFilename: `${attachmentBase}-${periodKey}.pdf`,

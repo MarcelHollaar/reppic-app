@@ -30,6 +30,8 @@ export type PdfStructuralLabels = {
   noData: string;
   page: string;
   of: string;
+  /** Kolomkop voor de maand-op-maand delta, bijv. "t.o.v. vorige maand". */
+  vsLastMonth: string;
 };
 
 export type BuildPdfParams = {
@@ -108,15 +110,27 @@ export function buildMonthlyReportPdf(params: BuildPdfParams): Buffer {
   function metricsSection(s: Extract<ReportSection, { type: "metrics" }>) {
     sectionTitle(s.title);
     if (!s.data.length) return emptyLine();
+    // Maand-op-maand kolom alleen tonen als minstens één tegel een delta heeft
+    // (eerste rapportperiode heeft er geen).
+    const withDelta = s.data.some((m) => m.delta !== undefined);
     autoTable(pdf, {
       startY: currentY,
-      head: [[t.metric, t.value]],
-      body: s.data.map((m) => [m.label, String(m.value)]),
+      head: [withDelta ? [t.metric, t.value, t.vsLastMonth] : [t.metric, t.value]],
+      body: s.data.map((m) =>
+        withDelta
+          ? [m.label, String(m.value), m.delta ?? ""]
+          : [m.label, String(m.value)],
+      ),
       margin: { left: margin, right: margin },
       styles: { fontSize: 9, cellPadding: 3.5, textColor: TEXT },
       headStyles: { fillColor: PRIMARY, textColor: [255, 255, 255], fontStyle: "bold" },
       alternateRowStyles: { fillColor: [248, 249, 250] },
-      columnStyles: { 1: { halign: "right", cellWidth: contentWidth * 0.35 } },
+      columnStyles: withDelta
+        ? {
+            1: { halign: "right", cellWidth: contentWidth * 0.25 },
+            2: { halign: "right", cellWidth: contentWidth * 0.25 },
+          }
+        : { 1: { halign: "right", cellWidth: contentWidth * 0.35 } },
     });
     currentY = (pdf as any).lastAutoTable.finalY + 12;
   }

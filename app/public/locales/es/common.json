@@ -717,7 +717,11 @@
       "metric": "Métrica",
       "noData": "No hay datos disponibles",
       "page": "Página",
-      "of": "de"
+      "of": "de",
+      "vsLastMonth": "vs. mes anterior",
+      "biggestMovers": "Mayores variaciones",
+      "planBasisNote": "vs. tu plan de ventas",
+      "momNarrativeHeading": "Qué cambió respecto al mes anterior"
     }
   },
   "breadCrumbs": {

@@ -581,7 +581,12 @@ This is an automated error notification from ${appName}.
     periodLabel: string;
     lang: string;
     /** Blokken met heading + highlight-tegels (operationeel, strategisch). */
-    blocks: { heading: string; highlights: { label: string; value: string | number }[] }[];
+    blocks: {
+      heading: string;
+      highlights: { label: string; value: string | number; delta?: string }[];
+      /** Korte AI-duiding van de maand-op-maand verandering (optioneel). */
+      momSummary?: string;
+    }[];
     pdf: Buffer;
     pdfFilename: string;
   }) {
@@ -595,6 +600,8 @@ This is an automated error notification from ${appName}.
 
     // Highlight-tegels per blok, inline-CSS tabellen (e-mailclient-veilig),
     // in de bestaande huisstijl (#5870f6 accenten, witte kaarten).
+    const deltaColor = (delta: string) =>
+      delta.startsWith("▲") ? "#16a34a" : delta.startsWith("▼") ? "#dc2626" : "#94a3b8";
     const blocksHtml = blocks
       .map((block) => {
         const tiles = block.highlights
@@ -602,15 +609,24 @@ This is an automated error notification from ${appName}.
             (h) => `
               <td align="center" style="padding:6px;">
                 <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;background:#f5f7ff;border:1px solid #e4e9ff;border-radius:10px;">
-                  <tr><td align="center" style="padding:14px 8px 4px;font-family:Arial,Helvetica,sans-serif;font-size:22px;font-weight:bold;color:#5870f6;">${h.value}</td></tr>
+                  <tr><td align="center" style="padding:14px 8px 2px;font-family:Arial,Helvetica,sans-serif;font-size:22px;font-weight:bold;color:#5870f6;">${h.value}</td></tr>
+                  ${
+                    h.delta
+                      ? `<tr><td align="center" style="padding:0 8px 2px;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;color:${deltaColor(h.delta)};">${h.delta}</td></tr>`
+                      : ""
+                  }
                   <tr><td align="center" style="padding:0 8px 14px;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#64748b;">${h.label}</td></tr>
                 </table>
               </td>`,
           )
           .join("");
+        const momLine = block.momSummary
+          ? `<tr><td style="padding:8px 2px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-style:italic;color:#475569;">${block.momSummary}</td></tr>`
+          : "";
         return `
           <tr><td style="padding:18px 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;color:#0f172a;">${block.heading}</td></tr>
-          <tr><td><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>${tiles}</tr></table></td></tr>`;
+          <tr><td><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>${tiles}</tr></table></td></tr>
+          ${momLine}`;
       })
       .join("");
 

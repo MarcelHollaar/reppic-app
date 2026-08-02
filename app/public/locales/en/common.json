@@ -769,7 +769,11 @@
       "metric": "Metric",
       "noData": "No data available",
       "page": "Page",
-      "of": "of"
+      "of": "of",
+      "vsLastMonth": "vs. last month",
+      "biggestMovers": "Biggest movers",
+      "planBasisNote": "vs. your sales plan",
+      "momNarrativeHeading": "What changed vs. last month"
     }
   },
   "breadCrumbs": {

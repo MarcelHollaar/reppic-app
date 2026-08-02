@@ -769,7 +769,11 @@
       "metric": "Metric",
       "noData": "Geen data beschikbaar",
       "page": "Pagina",
-      "of": "van"
+      "of": "van",
+      "vsLastMonth": "t.o.v. vorige maand",
+      "biggestMovers": "Grootste stijgers & dalers",
+      "planBasisNote": "t.o.v. je salesplan",
+      "momNarrativeHeading": "Wat veranderde er t.o.v. vorige maand"
     }
   },
   "breadCrumbs": {

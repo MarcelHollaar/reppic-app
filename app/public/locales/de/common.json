@@ -722,7 +722,11 @@
       "metric": "Metrik",
       "noData": "Keine Daten verfügbar",
       "page": "Seite",
-      "of": "von"
+      "of": "von",
+      "vsLastMonth": "ggü. Vormonat",
+      "biggestMovers": "Größte Auf- & Absteiger",
+      "planBasisNote": "ggü. Ihrem Vertriebsplan",
+      "momNarrativeHeading": "Was sich ggü. dem Vormonat verändert hat"
     }
   },
   "breadCrumbs": {
