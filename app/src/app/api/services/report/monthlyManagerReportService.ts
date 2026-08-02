@@ -24,6 +24,9 @@ import { buildMonthlyReportPdf, type PdfStructuralLabels } from "./reportPdf";
 import { generateMonthOverMonthNarrative } from "./monthOverMonthNarrative";
 
 const SUPPORTED_LANGS = ["nl", "en", "de", "fr", "es", "it"];
+/** Kleine pauze tussen verzendingen — respecteert SMTP-rate-limits. */
+const SEND_DELAY_MS = 1100;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const LOCALE_MAP: Record<string, string> = {
   nl: "nl-NL", en: "en-US", de: "de-DE", fr: "fr-FR", es: "es-ES", it: "it-IT",
 };
@@ -332,28 +335,40 @@ export async function runMonthlyManagerReports(options: {
         const attachmentBase = i18next.t(
           "emails.monthlyReport.attachmentName",
         ) as string;
-        await mailService.sendMonthlyManagerReport({
-          to: manager.email,
-          managerName: manager.name,
-          companyTitle: company.title,
-          periodLabel: period,
-          lang,
-          blocks: [
-            {
-              heading: opBlock.heading,
-              highlights: opBlock.highlights,
-              momSummary: narrative?.operational || undefined,
-            },
-            {
-              heading: stratBlock.heading,
-              highlights: stratBlock.highlights,
-              momSummary: narrative?.strategic || undefined,
-            },
-          ],
-          pdf,
-          pdfFilename: `${attachmentBase}-${periodKey}.pdf`,
-        });
-        entry.recipients.push(manager.email);
+        // Per manager afzonderlijk versturen: één mislukte verzending
+        // (bijv. tijdelijke SMTP-fout) mag de overige managers niet blokkeren.
+        try {
+          await mailService.sendMonthlyManagerReport({
+            to: manager.email,
+            managerName: manager.name,
+            companyTitle: company.title,
+            periodLabel: period,
+            lang,
+            blocks: [
+              {
+                heading: opBlock.heading,
+                highlights: opBlock.highlights,
+                momSummary: narrative?.operational || undefined,
+              },
+              {
+                heading: stratBlock.heading,
+                highlights: stratBlock.highlights,
+                momSummary: narrative?.strategic || undefined,
+              },
+            ],
+            pdf,
+            pdfFilename: `${attachmentBase}-${periodKey}.pdf`,
+          });
+          entry.recipients.push(manager.email);
+        } catch (sendErr) {
+          entry.skippedRecipients.push(manager.email);
+          console.error(
+            `[MonthlyReport] Verzenden aan ${manager.email} mislukt:`,
+            sendErr,
+          );
+        }
+        // Kleine pauze tegen SMTP-rate-limits.
+        await sleep(SEND_DELAY_MS);
       }
 
       if (!options.dryRun && entry.recipients.length > 0) {

@@ -49,7 +49,18 @@ export async function generateMonthOverMonthNarrative(params: {
     ].join("\n");
 
     const raw = await completeChat(prompt);
-    const parsed = JSON.parse(raw) as Partial<MoMNarrative>;
+    // De gateway wikkelt json_object soms in ```json … ``` — zelfde defensieve
+    // brace-fallback als terminologyDocService.
+    let parsed: Partial<MoMNarrative> = {};
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      const start = raw.indexOf("{");
+      const end = raw.lastIndexOf("}");
+      if (start !== -1 && end !== -1 && end > start) {
+        parsed = JSON.parse(raw.slice(start, end + 1));
+      }
+    }
     return {
       operational:
         typeof parsed.operational === "string" ? parsed.operational.trim() : "",
