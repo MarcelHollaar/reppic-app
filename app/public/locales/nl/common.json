@@ -773,7 +773,22 @@
       "vsLastMonth": "t.o.v. vorige maand",
       "biggestMovers": "Grootste stijgers & dalers",
       "planBasisNote": "t.o.v. je salesplan",
-      "momNarrativeHeading": "Wat veranderde er t.o.v. vorige maand"
+      "momNarrativeHeading": "Wat veranderde er t.o.v. vorige maand",
+      "managementSummaryHeading": "Managementsamenvatting",
+      "opportunitiesHeading": "Kansen",
+      "watchoutsHeading": "Aandachtspunten",
+      "mgmtWhatWeSee": "Wat zien we?",
+      "mgmtLikelyCause": "Waarschijnlijke oorzaak",
+      "mgmtOperationalMeaning": "Operationele betekenis",
+      "mgmtStrategicMeaning": "Strategische betekenis",
+      "mgmtRecommendedAction": "Aanbevolen managementactie",
+      "oppRising": "{term} steeg met {n} punten naar {to}%.",
+      "oppNeed": "Groeiende klantbehoefte: {term}.",
+      "oppResonance": "Propositie die het best aanslaat: {term}.",
+      "watchDrop": "{term} daalde met {n} punten naar {to}%.",
+      "watchResistance": "Grootste weerstand: {term} ({n} vermeldingen).",
+      "watchCompetitor": "Meest genoemde concurrent: {term} ({n}×).",
+      "watchIssue": "Belangrijkste gemelde issue: {term}."
     }
   },
   "breadCrumbs": {

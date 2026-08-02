@@ -13,15 +13,21 @@ import { USER_ROLE } from "@/configs/constants";
 import { mailService } from "@/app/api/services/mailService";
 import { fetchCompanyDashboards } from "./dashboardReportData";
 import {
+  deriveOpportunitiesAndWatchouts,
   hasReportData,
   mapOperational,
   mapStrategic,
   opCoreMetrics,
   stratCoreMetrics,
+  type DashboardReport,
   type ReportLabels,
+  type ReportSection,
 } from "./reportSections";
 import { buildMonthlyReportPdf, type PdfStructuralLabels } from "./reportPdf";
-import { generateMonthOverMonthNarrative } from "./monthOverMonthNarrative";
+import {
+  generateManagementSummary,
+  type ManagementSummary,
+} from "./managementSummary";
 
 const SUPPORTED_LANGS = ["nl", "en", "de", "fr", "es", "it"];
 /** Kleine pauze tussen verzendingen — respecteert SMTP-rate-limits. */
@@ -84,6 +90,12 @@ async function labelsFor(lang: string): Promise<{
     "competitors", "strengths", "competitionConclusion", "execution",
     "resonance", "propositionConclusion",
     "biggestMovers", "planBasisNote", "momNarrativeHeading",
+    // Managementrapport-uitbreiding.
+    "managementSummaryHeading", "opportunitiesHeading", "watchoutsHeading",
+    "mgmtWhatWeSee", "mgmtLikelyCause", "mgmtOperationalMeaning",
+    "mgmtStrategicMeaning", "mgmtRecommendedAction",
+    "oppRising", "oppNeed", "oppResonance",
+    "watchDrop", "watchResistance", "watchCompetitor", "watchIssue",
   ];
   const report: ReportLabels = {};
   for (const k of reportKeys) report[k] = t(k);
@@ -227,11 +239,9 @@ export async function runMonthlyManagerReports(options: {
           ),
         );
       }
-      // AI-duiding één keer per taal (niet per manager) — en niet bij dryRun.
-      const narrativeCache = new Map<
-        string,
-        { operational: string; strategic: string }
-      >();
+      // Management Summary één keer per taal (niet per manager) — en niet bij
+      // dryRun. `null` = geprobeerd maar mislukt/geen data (fail-open).
+      const summaryCache = new Map<string, ManagementSummary | null>();
 
       // Bedrijf zonder data in de periode (in élke gebruikte taal) → geen mail.
       const anyData = [...perLang.values()].some((d) =>
@@ -279,44 +289,71 @@ export async function runMonthlyManagerReports(options: {
           continue;
         }
 
-        // Maand-op-maand AI-duiding (alleen als er een vorige maand is);
-        // fail-open — lege strings laten het rapport gewoon doorgaan.
-        let narrative = narrativeCache.get(lang);
-        if (!narrative && hasPrev) {
-          narrative = await generateMonthOverMonthNarrative({
+        // Management Summary (5-delig, hergebruikt de backend-conclusie) — één
+        // keer per taal, fail-open. `undefined` in de cache = nog niet geprobeerd.
+        let summary = summaryCache.get(lang);
+        if (summary === undefined) {
+          summary = await generateManagementSummary({
+            companyId: company.id,
+            companyTitle: company.title,
             lang,
-            periodLabel: period,
-            prevPeriodLabel: periodLabel(
-              prevPeriod.year,
-              prevPeriod.month,
-              lang,
-            ),
-            operational: {
-              current: opCoreMetrics(data.operational),
-              previous: opCoreMetrics(prevData.operational),
+            labels: {
+              avgPica: L.avgPica,
+              clearNextStep: L.clearNextStep,
+              nextStepClarity: L.nextStepClarity,
+              dmuClarity: L.dmuClarity,
+              positiveSentiment: L.positiveSentiment,
             },
-            strategic: {
-              current: stratCoreMetrics(data.strategic),
-              previous: stratCoreMetrics(prevData.strategic),
-            },
+            op: opCoreMetrics(data.operational),
+            prevOp: hasPrev ? opCoreMetrics(prevData.operational) : undefined,
+            strat: stratCoreMetrics(data.strategic),
+            prevStrat: hasPrev ? stratCoreMetrics(prevData.strategic) : undefined,
           });
-          narrativeCache.set(lang, narrative);
+          summaryCache.set(lang, summary);
         }
-        if (narrative?.operational) {
-          // Ná kerncijfers (+ evt. movers) in de PDF.
-          opBlock.sections.splice(hasPrev ? 2 : 1, 0, {
-            title: L.momNarrativeHeading,
-            type: "text",
-            data: narrative.operational,
+
+        // Kansen & Aandachtspunten — deterministisch, geen LLM.
+        const ow = deriveOpportunitiesAndWatchouts(
+          data.operational,
+          data.strategic,
+          hasPrev ? prevData.operational : undefined,
+          hasPrev ? prevData.strategic : undefined,
+          L,
+        );
+
+        // Management Summary-blok bovenaan het rapport (na de cover).
+        const summarySections: ReportSection[] = [];
+        if (summary) {
+          const add = (title: string, body: string) => {
+            if (body) summarySections.push({ title, type: "text", data: body });
+          };
+          add(L.mgmtWhatWeSee, summary.whatWeSee);
+          add(L.mgmtLikelyCause, summary.likelyCause);
+          add(L.mgmtOperationalMeaning, summary.operationalMeaning);
+          add(L.mgmtStrategicMeaning, summary.strategicMeaning);
+          add(L.mgmtRecommendedAction, summary.recommendedAction);
+        }
+        if (ow.opportunities.length)
+          summarySections.push({
+            title: L.opportunitiesHeading,
+            type: "list",
+            data: ow.opportunities,
           });
-        }
-        if (narrative?.strategic) {
-          stratBlock.sections.splice(hasPrev ? 2 : 1, 0, {
-            title: L.momNarrativeHeading,
-            type: "text",
-            data: narrative.strategic,
+        if (ow.watchouts.length)
+          summarySections.push({
+            title: L.watchoutsHeading,
+            type: "list",
+            data: ow.watchouts,
           });
-        }
+        const summaryBlock: DashboardReport = {
+          heading: L.managementSummaryHeading,
+          highlights: [],
+          sections: summarySections,
+        };
+
+        const blocks: DashboardReport[] = summarySections.length
+          ? [summaryBlock, opBlock, stratBlock]
+          : [opBlock, stratBlock];
 
         const pdf = buildMonthlyReportPdf({
           companyTitle: company.title,
@@ -327,7 +364,7 @@ export async function runMonthlyManagerReports(options: {
             month: "long",
             day: "numeric",
           }),
-          blocks: [opBlock, stratBlock],
+          blocks,
           labels: pdfLabels,
         });
 
@@ -344,17 +381,17 @@ export async function runMonthlyManagerReports(options: {
             companyTitle: company.title,
             periodLabel: period,
             lang,
+            managementTeaser: summary
+              ? {
+                  title: L.mgmtWhatWeSee,
+                  body: summary.whatWeSee,
+                  actionTitle: L.mgmtRecommendedAction,
+                  action: summary.recommendedAction,
+                }
+              : undefined,
             blocks: [
-              {
-                heading: opBlock.heading,
-                highlights: opBlock.highlights,
-                momSummary: narrative?.operational || undefined,
-              },
-              {
-                heading: stratBlock.heading,
-                highlights: stratBlock.highlights,
-                momSummary: narrative?.strategic || undefined,
-              },
+              { heading: opBlock.heading, highlights: opBlock.highlights },
+              { heading: stratBlock.heading, highlights: stratBlock.highlights },
             ],
             pdf,
             pdfFilename: `${attachmentBase}-${periodKey}.pdf`,

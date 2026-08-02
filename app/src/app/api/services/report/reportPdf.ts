@@ -172,6 +172,23 @@ export function buildMonthlyReportPdf(params: BuildPdfParams): Buffer {
     currentY += lines.length * 5 + 10;
   }
 
+  function listSection(s: Extract<ReportSection, { type: "list" }>) {
+    sectionTitle(s.title);
+    if (!s.data.length) return emptyLine();
+    pdf.setTextColor(...TEXT);
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "normal");
+    for (const item of s.data) {
+      const lines = pdf.splitTextToSize(item, contentWidth - 6);
+      if (pageBreak(lines.length * 5 + 4)) newPage(companyTitle);
+      pdf.setFillColor(...PRIMARY);
+      pdf.circle(margin + 1.2, currentY - 1.3, 0.9, "F"); // bullet
+      pdf.text(lines, margin + 6, currentY);
+      currentY += lines.length * 5 + 3;
+    }
+    currentY += 7;
+  }
+
   function emptyLine() {
     pdf.setTextColor(150, 150, 150);
     pdf.setFontSize(10);
@@ -221,6 +238,7 @@ export function buildMonthlyReportPdf(params: BuildPdfParams): Buffer {
     for (const section of block.sections) {
       if (section.type === "metrics") metricsSection(section);
       else if (section.type === "table") tableSection(section);
+      else if (section.type === "list") listSection(section);
       else textSection(section);
     }
   }

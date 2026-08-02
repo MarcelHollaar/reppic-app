@@ -16,7 +16,9 @@ const DASHBOARD_API_URL =
 
 export type CompanyDashboards = { operational: any; strategic: any };
 
-function companyToken(companyId: string): string {
+export const DASHBOARD_BASE_URL = DASHBOARD_API_URL;
+
+export function companyToken(companyId: string): string {
   if (!JWT_SECRET) throw new Error("JWT_SECRET niet geconfigureerd");
   // rol "manager" → de backend scoopt op het bedrijf (niet superadmin = alles).
   return jwt.sign(

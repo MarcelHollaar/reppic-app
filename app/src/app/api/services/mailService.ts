@@ -580,6 +580,13 @@ This is an automated error notification from ${appName}.
     /** Bijv. "juli 2026" — al gelokaliseerd door de aanroeper. */
     periodLabel: string;
     lang: string;
+    /** Korte management-teaser bovenaan de mail (uit de Management Summary). */
+    managementTeaser?: {
+      title: string;
+      body: string;
+      actionTitle: string;
+      action: string;
+    };
     /** Blokken met heading + highlight-tegels (operationeel, strategisch). */
     blocks: {
       heading: string;
@@ -590,7 +597,7 @@ This is an automated error notification from ${appName}.
     pdf: Buffer;
     pdfFilename: string;
   }) {
-    const { to, managerName, companyTitle, periodLabel, lang, blocks, pdf, pdfFilename } = params;
+    const { to, managerName, companyTitle, periodLabel, lang, blocks, pdf, pdfFilename, managementTeaser } = params;
     await i18next.changeLanguage(lang);
     const appUrl = process.env.APP_URL!;
     const t = (key: string, opts?: Record<string, unknown>) =>
@@ -630,9 +637,20 @@ This is an automated error notification from ${appName}.
       })
       .join("");
 
+    const esc = (v: string) =>
+      String(v ?? "").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c] as string);
+    const teaserHtml =
+      managementTeaser && (managementTeaser.body || managementTeaser.action)
+        ? `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;background:#f5f7ff;border:1px solid #e4e9ff;border-radius:10px;margin:6px 0 4px;"><tr><td style="padding:14px 16px;">
+             ${managementTeaser.body ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#334155;margin:0 0 8px;"><strong style="color:#5870f6;">${esc(managementTeaser.title)}:</strong> ${esc(managementTeaser.body)}</p>` : ""}
+             ${managementTeaser.action ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#334155;margin:0;white-space:pre-line;"><strong style="color:#5870f6;">${esc(managementTeaser.actionTitle)}:</strong> ${esc(managementTeaser.action)}</p>` : ""}
+           </td></tr></table>`
+        : "";
+
     const htmlRaw = `
       <p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#0f172a;margin:0 0 8px;">${t("greeting", { name: managerName })}</p>
       <p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#334155;margin:0 0 4px;">${t("intro", { company: companyTitle, period: periodLabel })}</p>
+      ${teaserHtml}
       <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#64748b;margin:0 0 8px;">${t("highlightsIntro")}</p>
       <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">${blocksHtml}</table>
       <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#334155;margin:16px 0 4px;">${t("fullReportNote")}</p>

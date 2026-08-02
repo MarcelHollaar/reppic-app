@@ -20,7 +20,8 @@ export type TableRow = { name: string; value: number; percentage?: number };
 export type ReportSection =
   | { title: string; type: "metrics"; data: MetricTile[] }
   | { title: string; type: "table"; data: TableRow[] }
-  | { title: string; type: "text"; data: string };
+  | { title: string; type: "text"; data: string }
+  | { title: string; type: "list"; data: string[] };
 
 export type DashboardReport = {
   heading: string;
@@ -371,4 +372,88 @@ export function hasReportData(op: any, strat: any): boolean {
     num(op?.conversationActivity?.totalConversations) > 0 ||
     num(strat?.conversationCount) > 0
   );
+}
+
+/**
+ * Kansen & Aandachtspunten — bewust DETERMINISTISCH (geen LLM). Elke bullet is
+ * direct herleidbaar naar één concreet datapunt, met het cijfer erin; interpretatie
+ * doet de Management Summary al. Voorkomt hallucinatie én parse-faalkans.
+ *
+ * `L` heeft de sjabloonsleutels nodig: oppRising, oppNeed, oppResonance,
+ * watchDrop, watchResistance, watchCompetitor, watchIssue (met {term}/{n}/{from}/{to}).
+ */
+export function deriveOpportunitiesAndWatchouts(
+  op: any,
+  strat: any,
+  prevOp: any | undefined,
+  prevStrat: any | undefined,
+  L: ReportLabels,
+): { opportunities: string[]; watchouts: string[] } {
+  const fill = (tpl: string, vars: Record<string, string | number>) =>
+    (tpl || "").replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ""));
+
+  const core = opCoreMetrics(op);
+  const pOp = prevOp !== undefined ? opCoreMetrics(prevOp) : undefined;
+  const strCore = stratCoreMetrics(strat);
+  const pStr = prevStrat !== undefined ? stratCoreMetrics(prevStrat) : undefined;
+
+  const opportunities: string[] = [];
+  const watchouts: string[] = [];
+
+  // Grootste positieve/negatieve delta over alle %-metrics.
+  if (pOp || pStr) {
+    const pctKeys: Array<[string, number, number | undefined]> = [
+      [L.avgPica, core.avgPica, pOp?.avgPica],
+      [L.clearNextStep, core.clearNextStep, pOp?.clearNextStep],
+      [L.nextStepClarity, core.nextStepClarity, pOp?.nextStepClarity],
+      [L.dmuClarity, core.dmuClarity, pOp?.dmuClarity],
+      [L.positiveSentiment, strCore.positiveSentiment, pStr?.positiveSentiment],
+    ];
+    const deltas = pctKeys
+      .filter(([, , prev]) => prev !== undefined)
+      .map(([label, curr, prev]) => ({ label, curr, delta: curr - (prev as number) }));
+    const up = [...deltas].sort((a, b) => b.delta - a.delta)[0];
+    const down = [...deltas].sort((a, b) => a.delta - b.delta)[0];
+    if (up && up.delta > 0)
+      opportunities.push(
+        fill(L.oppRising, { term: up.label, n: Math.round(up.delta), to: Math.round(up.curr) }),
+      );
+    if (down && down.delta < 0)
+      watchouts.push(
+        fill(L.watchDrop, { term: down.label, n: Math.abs(Math.round(down.delta)), to: Math.round(down.curr) }),
+      );
+  }
+
+  // Sterkste propositie-resonantie (kans).
+  const resonance = toRows(strat?.proposition?.resonance)[0];
+  if (resonance)
+    opportunities.push(fill(L.oppResonance, { term: resonance.name }));
+
+  // Sterkst groeiende behoefte-categorie (kans).
+  const trendGroups = (strat?.trends?.trendGroups || {}) as Record<string, unknown>;
+  const topNeed = Object.values(trendGroups)
+    .flatMap((g) => arr<Record<string, unknown>>(g))
+    .map((it) => ({ name: String(it.name ?? "—"), value: num(it.value) }))
+    .filter((r) => r.name !== "—")
+    .sort((a, b) => b.value - a.value)[0];
+  if (topNeed) opportunities.push(fill(L.oppNeed, { term: topNeed.name }));
+
+  // Top-weerstand (aandachtspunt).
+  const resistance = toRows(op?.resistanceNeeds?.topResistances)[0];
+  if (resistance)
+    watchouts.push(fill(L.watchResistance, { term: resistance.name, n: resistance.value }));
+
+  // Meest genoemde concurrent (aandachtspunt).
+  const competitor = toRows(strat?.competition?.competitors, ["name", "competitor"])[0];
+  if (competitor)
+    watchouts.push(fill(L.watchCompetitor, { term: competitor.name, n: competitor.value }));
+
+  // Grootste gemeld issue (aandachtspunt).
+  const issue = toRows(strat?.customerSatisfaction?.issues)[0];
+  if (issue) watchouts.push(fill(L.watchIssue, { term: issue.name }));
+
+  return {
+    opportunities: opportunities.filter(Boolean).slice(0, 4),
+    watchouts: watchouts.filter(Boolean).slice(0, 4),
+  };
 }

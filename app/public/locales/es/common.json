@@ -721,7 +721,22 @@
       "vsLastMonth": "vs. mes anterior",
       "biggestMovers": "Mayores variaciones",
       "planBasisNote": "vs. tu plan de ventas",
-      "momNarrativeHeading": "Qué cambió respecto al mes anterior"
+      "momNarrativeHeading": "Qué cambió respecto al mes anterior",
+      "managementSummaryHeading": "Resumen ejecutivo",
+      "opportunitiesHeading": "Oportunidades",
+      "watchoutsHeading": "Puntos de atención",
+      "mgmtWhatWeSee": "Lo que vemos",
+      "mgmtLikelyCause": "Causa probable",
+      "mgmtOperationalMeaning": "Impacto operacional",
+      "mgmtStrategicMeaning": "Impacto estratégico",
+      "mgmtRecommendedAction": "Acción recomendada",
+      "oppRising": "{term} subió {n} puntos hasta {to}%.",
+      "oppNeed": "Necesidad creciente del cliente: {term}.",
+      "oppResonance": "Propuesta de valor con mejor resonancia: {term}.",
+      "watchDrop": "{term} bajó {n} puntos a {to}%.",
+      "watchResistance": "Mayor resistencia: {term} ({n} menciones).",
+      "watchCompetitor": "Competidor más mencionado: {term} ({n}×).",
+      "watchIssue": "Principal problema reportado: {term}."
     }
   },
   "breadCrumbs": {
