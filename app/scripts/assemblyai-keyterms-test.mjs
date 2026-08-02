@@ -73,7 +73,7 @@ const expect = (arg("expect", "") || "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
-const model = arg("model", "universal-3-pro");
+const model = arg("model", "universal-3-5-pro");
 const baselineModel = arg("baseline-model", null);
 
 const headers = { authorization: KEY, "content-type": "application/json" };
@@ -104,8 +104,11 @@ function toText(t) {
 }
 
 function scoreExpect(text) {
-  const lower = text.toLowerCase();
-  const hits = expect.filter((term) => lower.includes(term.toLowerCase()));
+  // Woordgrens-match (case-insensitief) zodat "POS" niet matcht binnen "post".
+  const hits = expect.filter((term) => {
+    const esc = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(^|[^\\p{L}])${esc}([^\\p{L}]|$)`, "iu").test(text);
+  });
   return { hits, total: expect.length };
 }
 
@@ -117,7 +120,8 @@ async function run(label, body) {
   const text = toText(t);
   const secs = ((Date.now() - t0) / 1000).toFixed(0);
   const diar = Array.isArray(t.utterances) && t.utterances.length > 0;
-  console.log(`model: ${t.speech_model ?? "(default)"} | taal: ${t.language_code} | speaker-labels: ${diar ? "JA" : "NEE"} | ${secs}s`);
+  const usedModel = t.speech_model ?? (Array.isArray(t.speech_models) ? t.speech_models.join("+") : "(default)");
+  console.log(`model: ${usedModel} | taal: ${t.language_code} | speaker-labels: ${diar ? "JA" : "NEE"} | ${secs}s`);
   if (expect.length) {
     const { hits, total } = scoreExpect(text);
     console.log(`verwachte termen gevonden: ${hits.length}/${total}  [${hits.join(", ")}]`);
@@ -137,12 +141,12 @@ console.log(`Verwachte termen (${expect.length}): ${expect.join(", ") || "(geen)
 
 try {
   // A. Baseline (huidige productie)
-  await run("A. Baseline (huidige productie)", baselineModel ? { ...base, speech_model: baselineModel } : base);
+  await run("A. Baseline (huidige productie)", baselineModel ? { ...base, speech_models: [baselineModel] } : base);
   // B. Kandidaat-model zonder keyterms
-  await run(`B. ${model} (zonder keyterms)`, { ...base, speech_model: model });
+  await run(`B. ${model} (zonder keyterms)`, { ...base, speech_models: [model] });
   // C. Kandidaat-model met keyterms
   if (keyterms.length) {
-    await run(`C. ${model} + keyterms`, { ...base, speech_model: model, keyterms_prompt: keyterms });
+    await run(`C. ${model} + keyterms`, { ...base, speech_models: [model], keyterms_prompt: keyterms });
   } else {
     console.log("\n(C overgeslagen: geen --keyterms meegegeven)");
   }
