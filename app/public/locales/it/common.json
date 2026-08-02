@@ -1129,7 +1129,10 @@
     "proposalEmpty": "Nessun termine proprio chiaro trovato nel documento",
     "proposalBanner": "L'IA ha proposto {{count}} termine/i. Verificali qui sotto, poi clicca su Salva.",
     "suggestError": "Impossibile generare un suggerimento",
-    "unsupportedFile": "Tipo di file non supportato. Usa .txt, .md o .docx, oppure incolla il testo (es. da un PDF)."
+    "unsupportedFile": "Tipo di file non supportato. Usa .txt, .md o .docx, oppure incolla il testo (es. da un PDF).",
+    "productTermsTitle": "Nomi di prodotti e termini chiave",
+    "productTermsIntro": "Nomi di prodotti e termini specifici dell'azienda pronunciati nelle conversazioni. Vengono usati per migliorare la trascrizione (ortografia corretta dei nomi). Separa con virgole o nuove righe.",
+    "productTermsPlaceholder": "Es. ProdottoX, ServizioY, Marchio…"
   },
   "plans": {
     "dropHere": "Trascina un file qui o clicca per selezionare",

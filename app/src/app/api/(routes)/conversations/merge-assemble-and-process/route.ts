@@ -3,6 +3,7 @@ import { Input, BlobSource, ALL_FORMATS } from "mediabunny";
 import { ConversationModel } from "@/app/api/models/conversation";
 import { ConversationService } from "@/app/api/services/conversationService";
 import { AssemblyAIService } from "@/app/api/services/assemblyAIService";
+import { buildConversationKeyterms } from "@/app/api/services/terminologyService";
 import {
   downloadFileFromFtp,
   listAudioChunks,
@@ -147,7 +148,8 @@ export async function POST(req: NextRequest) {
             uploadUrl,
             conversationId,
             userId,
-            getCallbackBaseUrl(req)
+            getCallbackBaseUrl(req),
+            await buildConversationKeyterms(userId)
           );
 
         console.log(

@@ -1,4 +1,5 @@
 import { AssemblyAIService } from "@/app/api/services/assemblyAIService";
+import { buildConversationKeyterms } from "@/app/api/services/terminologyService";
 import { ConversationService } from "@/app/api/services/conversationService";
 import { hasFilePath } from "@/app/api/utils/fileStorage";
 import { CONVERSATION_STATUS, TWIN_AI_STATUS } from "@/configs/constants";
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest) {
       conversationId,
       userId,
       getCallbackBaseUrl(req),
+      await buildConversationKeyterms(userId),
     );
 
     console.log(

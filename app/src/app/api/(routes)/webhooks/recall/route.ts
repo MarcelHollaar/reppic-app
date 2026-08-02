@@ -2,6 +2,7 @@ import { ConversationModel } from "@/app/api/models/conversation";
 import { CustomerModel } from "@/app/api/models/customer";
 import { UserModel } from "@/app/api/models/user";
 import { AssemblyAIService } from "@/app/api/services/assemblyAIService";
+import { buildConversationKeyterms } from "@/app/api/services/terminologyService";
 import { RecallAIService } from "@/app/api/services/recallAIService";
 import { NextRequest, NextResponse } from "next/server";
 import { Webhook } from "svix";
@@ -186,7 +187,8 @@ export async function POST(req: NextRequest) {
     audioUrl,
     conversation.id,
     user.id,
-    getCallbackBaseUrl(req)
+    getCallbackBaseUrl(req),
+    await buildConversationKeyterms(user.id)
   );
 
   console.log(

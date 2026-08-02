@@ -1139,7 +1139,10 @@
     "proposalEmpty": "Keine eindeutigen eigenen Begriffe im Dokument gefunden",
     "proposalBanner": "Die KI hat {{count}} Begriff(e) vorgeschlagen. Prüfen Sie sie unten und klicken Sie dann auf Speichern.",
     "suggestError": "Es konnte kein Vorschlag erstellt werden",
-    "unsupportedFile": "Dateityp nicht unterstützt. Verwenden Sie .txt, .md oder .docx, oder fügen Sie den Text ein (z. B. aus einer PDF)."
+    "unsupportedFile": "Dateityp nicht unterstützt. Verwenden Sie .txt, .md oder .docx, oder fügen Sie den Text ein (z. B. aus einer PDF).",
+    "productTermsTitle": "Produktnamen & Schlüsselbegriffe",
+    "productTermsIntro": "Unternehmensspezifische Produktnamen und Begriffe, die in Gesprächen vorkommen. Sie verbessern die Transkription (korrekte Schreibweise von Namen). Mit Kommas oder Zeilenumbrüchen trennen.",
+    "productTermsPlaceholder": "Z. B. ProduktX, ServiceY, Markenname…"
   },
   "plans": {
     "dropHere": "Datei hierher ziehen oder klicken zum Auswählen",

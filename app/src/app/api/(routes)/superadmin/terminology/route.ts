@@ -3,6 +3,7 @@ import { authMiddleware } from "@/app/api/middleware/authMiddleware";
 import { USER_ROLE } from "@/configs/constants";
 import { prisma } from "@/app/api/utils/prisma";
 import {
+  getCompanyProductTerms,
   getCompanyTerminology,
   setCompanyTerminology,
 } from "@/app/api/services/terminologyService";
@@ -43,12 +44,13 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const [company, mapping] = await Promise.all([
+    const [company, mapping, productTerms] = await Promise.all([
       prisma.company.findUnique({
         where: { id: companyId },
         select: { id: true, title: true },
       }),
       getCompanyTerminology(companyId),
+      getCompanyProductTerms(companyId),
     ]);
 
     if (!company) {
@@ -60,6 +62,7 @@ export async function GET(req: NextRequest) {
       phases: TERMINOLOGY_PHASES,
       topics: TERMINOLOGY_TOPICS,
       mapping,
+      productTerms,
     });
   } catch (error) {
     console.error("[terminology] Failed to load glossary:", error);
@@ -78,14 +81,19 @@ export async function PUT(req: NextRequest) {
 
   const requester = (req as any).user;
 
-  let body: { companyId?: string; mapping?: unknown; sourceFilename?: string | null };
+  let body: {
+    companyId?: string;
+    mapping?: unknown;
+    sourceFilename?: string | null;
+    productTerms?: unknown;
+  };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Ongeldige JSON" }, { status: 400 });
   }
 
-  const { companyId, mapping, sourceFilename } = body;
+  const { companyId, mapping, sourceFilename, productTerms } = body;
   if (!companyId) {
     return NextResponse.json({ error: "companyId is verplicht" }, { status: 400 });
   }
@@ -104,9 +112,13 @@ export async function PUT(req: NextRequest) {
       mapping,
       requester?.id ?? null,
       sourceFilename ?? undefined,
+      productTerms,
     );
 
-    return NextResponse.json({ mapping: saved });
+    return NextResponse.json({
+      mapping: saved,
+      productTerms: await getCompanyProductTerms(companyId),
+    });
   } catch (error) {
     console.error("[terminology] Failed to save glossary:", error);
     return NextResponse.json(

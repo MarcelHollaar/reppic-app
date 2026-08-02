@@ -41,6 +41,12 @@ export class AssemblyAIService {
      * without configuration. Falls back to APP_URL only when omitted.
      */
     callbackBaseUrl?: string | null,
+    /**
+     * Company-specific terms to boost (company name, glossary jargon, product
+     * names) — built via `buildConversationKeyterms(userId)`. Optional: an
+     * empty/omitted list simply transcribes without boosting.
+     */
+    keyterms?: string[],
   ): Promise<string> {
     try {
       console.log(
@@ -63,12 +69,30 @@ export class AssemblyAIService {
       // Rollback 2026-07-22: de callback-authenticatie (gedeelde secret via een
       // custom header) is verwijderd, samen met de verificatie in de webhook.
       // Er wordt dus geen auth-header meer aan AssemblyAI meegegeven.
+      //
+      // 2026-08-02: expliciet nieuwste model + bedrijfsspecifieke keyterms.
+      // speech_models (meervoud!) — universal-2 als fallback voor talen die
+      // universal-3-5-pro niet dekt. Live A/B/C-test op een echte NL-opname
+      // bewees: speaker-labels blijven behouden, garbles gefixt
+      // ("Potsdamal"→"PostNL") en keyterms corrigeren merk-/eigennamen.
+      // De SDK-types kennen speech_models/keyterms_prompt nog niet → cast.
+      const extraParams: Record<string, unknown> = {
+        speech_models: ["universal-3-5-pro", "universal-2"],
+      };
+      if (keyterms && keyterms.length > 0) {
+        extraParams.keyterms_prompt = keyterms;
+        console.log(
+          `[AssemblyAI] Boosting ${keyterms.length} company keyterms`,
+        );
+      }
+
       const transcript = await client.transcripts.submit({
         audio: audioUrl,
         language_detection: true,
         speaker_labels: true,
         webhook_url: webhookUrl,
-      });
+        ...extraParams,
+      } as Parameters<typeof client.transcripts.submit>[0]);
 
       console.log(`[AssemblyAI] Transcription submitted, ID: ${transcript.id}`);
       return transcript.id;

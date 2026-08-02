@@ -26,24 +26,111 @@ export async function getCompanyTerminology(
   return sanitizeTerminologyMapping(row.mapping);
 }
 
-/** Upserts a company's glossary. Unknown keys / empty terms are dropped. */
+/** Normalizes a raw product-terms value to a clean string array. */
+export function sanitizeProductTerms(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const value of input) {
+    if (typeof value !== "string") continue;
+    const term = value.trim();
+    if (term.length < 2) continue;
+    const lower = term.toLowerCase();
+    if (seen.has(lower)) continue;
+    seen.add(lower);
+    out.push(term);
+  }
+  return out;
+}
+
+/** Returns the stored product terms for a company (for transcription keyterms). */
+export async function getCompanyProductTerms(
+  companyId: string | null | undefined,
+): Promise<string[]> {
+  if (!companyId) return [];
+  const row = await prisma.companyTerminology.findUnique({
+    where: { company_id: companyId },
+    select: { product_terms: true },
+  });
+  return sanitizeProductTerms(row?.product_terms);
+}
+
+/**
+ * Maximum keyterms sent per transcription. AssemblyAI's hard limit is 1,000 on
+ * universal-3-5-pro, but boosting works best with a lean, relevant list.
+ */
+const KEYTERMS_CAP = 400;
+
+/**
+ * Builds the AssemblyAI `keyterms_prompt` list for a conversation of this user:
+ * company name + the company's glossary jargon + the company's product terms.
+ *
+ * Deliberately company-specific only — no generic base list. Our internal PICA
+ * phase/topic labels ("Proposition", "Break the ice", …) are analysis
+ * vocabulary that is never actually spoken in a call; boosting those would
+ * steer recognition the wrong way. What IS spoken: the company's own names,
+ * jargon and products. Live E2E test 2026-08-02 confirmed exactly that pattern
+ * ("Post.nl"→"PostNL", "Martina G."→"Martijn").
+ *
+ * Fail-open: on any error return [] so transcription proceeds without boost.
+ */
+export async function buildConversationKeyterms(
+  userId: string | null | undefined,
+): Promise<string[]> {
+  try {
+    if (!userId) return [];
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { company_id: true, company: { select: { title: true } } },
+    });
+    if (!user?.company_id) return [];
+
+    const mapping = await getCompanyTerminology(user.company_id);
+    const productTerms = await getCompanyProductTerms(user.company_id);
+
+    const raw = [
+      user.company?.title ?? "",
+      ...Object.values(mapping),
+      ...productTerms,
+    ];
+    return sanitizeProductTerms(raw).slice(0, KEYTERMS_CAP);
+  } catch (error) {
+    console.error(
+      "[Terminology] buildConversationKeyterms failed (continuing without keyterms):",
+      error,
+    );
+    return [];
+  }
+}
+
+/**
+ * Upserts a company's glossary. Unknown keys / empty terms are dropped.
+ * `productTerms` (optional): when provided, also replaces the company's
+ * product-term list for transcription keyterms; when omitted the stored list
+ * stays untouched.
+ */
 export async function setCompanyTerminology(
   companyId: string,
   mapping: unknown,
   updatedBy?: string | null,
   sourceFilename?: string | null,
+  productTerms?: unknown,
 ): Promise<TerminologyMapping> {
   const clean = sanitizeTerminologyMapping(mapping);
+  const cleanProducts =
+    productTerms !== undefined ? sanitizeProductTerms(productTerms) : undefined;
   await prisma.companyTerminology.upsert({
     where: { company_id: companyId },
     create: {
       company_id: companyId,
       mapping: clean,
+      product_terms: cleanProducts ?? [],
       updated_by: updatedBy ?? null,
       source_filename: sourceFilename ?? null,
     },
     update: {
       mapping: clean,
+      ...(cleanProducts !== undefined ? { product_terms: cleanProducts } : {}),
       updated_by: updatedBy ?? null,
       ...(sourceFilename !== undefined ? { source_filename: sourceFilename } : {}),
     },

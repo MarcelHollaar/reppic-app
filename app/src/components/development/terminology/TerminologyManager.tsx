@@ -34,6 +34,9 @@ export default function TerminologyManager() {
   const [suggesting, setSuggesting] = useState(false);
   const [pastedText, setPastedText] = useState("");
   const [proposalCount, setProposalCount] = useState<number | null>(null);
+  // Productnamen/kernbegrippen voor transcriptie-keyterms — als vrije tekst
+  // (komma- of regel-gescheiden) zodat plakken vanuit een lijst makkelijk is.
+  const [productTermsText, setProductTermsText] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Load company list once.
@@ -62,6 +65,7 @@ export default function TerminologyManager() {
   useEffect(() => {
     setProposalCount(null);
     setPastedText("");
+    setProductTermsText("");
     if (!selectedCompanyId) {
       setPhases([]);
       setTopics([]);
@@ -81,6 +85,9 @@ export default function TerminologyManager() {
         setPhases(data.phases || []);
         setTopics(data.topics || []);
         setMapping(data.mapping || {});
+        setProductTermsText(
+          Array.isArray(data.productTerms) ? data.productTerms.join(", ") : "",
+        );
       } catch (e) {
         console.error("[terminology] load glossary failed", e);
         toast.error(t("terminology.loadGlossaryError"));
@@ -115,14 +122,25 @@ export default function TerminologyManager() {
         const term = (v || "").trim();
         if (term) clean[k] = term;
       }
+      const productTerms = productTermsText
+        .split(/[\n,]/)
+        .map((s) => s.trim())
+        .filter(Boolean);
       const res = await fetch("/api/superadmin/terminology", {
         method: "PUT",
         headers: headers || undefined,
-        body: JSON.stringify({ companyId: selectedCompanyId, mapping: clean }),
+        body: JSON.stringify({
+          companyId: selectedCompanyId,
+          mapping: clean,
+          productTerms,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "error");
       setMapping(data.mapping || {});
+      setProductTermsText(
+        Array.isArray(data.productTerms) ? data.productTerms.join(", ") : "",
+      );
       // Mark the company as having a glossary (for the picker hint).
       setCompanies((prev) =>
         prev.map((c) =>
@@ -354,6 +372,22 @@ export default function TerminologyManager() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="mt-6">
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+              {t("terminology.productTermsTitle")}
+            </h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {t("terminology.productTermsIntro")}
+            </p>
+            <textarea
+              value={productTermsText}
+              onChange={(e) => setProductTermsText(e.target.value)}
+              rows={3}
+              placeholder={t("terminology.productTermsPlaceholder")}
+              className="mt-2 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
           </div>
 
           <div className="mt-4 flex items-center justify-between">

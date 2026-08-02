@@ -1175,7 +1175,10 @@
     "proposalEmpty": "Geen duidelijke eigen begrippen gevonden in het document",
     "proposalBanner": "AI heeft {{count}} term(en) voorgesteld. Controleer ze hieronder en klik daarna op Opslaan.",
     "suggestError": "Kon geen voorstel genereren",
-    "unsupportedFile": "Bestandstype niet ondersteund. Gebruik .txt, .md of .docx, of plak de tekst (bv. uit een PDF)."
+    "unsupportedFile": "Bestandstype niet ondersteund. Gebruik .txt, .md of .docx, of plak de tekst (bv. uit een PDF).",
+    "productTermsTitle": "Productnamen & kernbegrippen",
+    "productTermsIntro": "Bedrijfsspecifieke productnamen en begrippen die in gesprekken worden uitgesproken. Deze worden gebruikt om de transcriptie te verbeteren (juiste spelling van namen). Scheid met komma's of nieuwe regels.",
+    "productTermsPlaceholder": "Bijv. ProductX, ServiceY, Merknaam…"
   },
   "plans": {
     "dropHere": "Sleep bestand hier of klik om te selecteren",

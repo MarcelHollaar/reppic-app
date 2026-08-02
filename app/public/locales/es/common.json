@@ -1129,7 +1129,10 @@
     "proposalEmpty": "No se encontraron términos propios claros en el documento",
     "proposalBanner": "La IA propuso {{count}} término(s). Revísalos abajo y luego haz clic en Guardar.",
     "suggestError": "No se pudo generar una sugerencia",
-    "unsupportedFile": "Tipo de archivo no compatible. Usa .txt, .md o .docx, o pega el texto (p. ej. de un PDF)."
+    "unsupportedFile": "Tipo de archivo no compatible. Usa .txt, .md o .docx, o pega el texto (p. ej. de un PDF).",
+    "productTermsTitle": "Nombres de productos y términos clave",
+    "productTermsIntro": "Nombres de productos y términos específicos de la empresa que se mencionan en las conversaciones. Se usan para mejorar la transcripción (ortografía correcta de los nombres). Separa con comas o saltos de línea.",
+    "productTermsPlaceholder": "P. ej. ProductoX, ServicioY, Marca…"
   },
   "plans": {
     "dropHere": "Arrastra un archivo aquí o haz clic para seleccionar",

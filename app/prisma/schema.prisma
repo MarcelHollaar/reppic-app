@@ -443,6 +443,9 @@ model CompanyTerminology {
   id              String   @id @default(uuid()) @map("id") @db.VarChar(40)
   company_id      String   @unique @map("company_id") @db.VarChar(40)
   mapping         Json     @map("mapping")
+  /// Bedrijfsspecifieke productnamen/kernbegrippen voor transcriptie-keyterms
+  /// (AssemblyAI keyterms_prompt). String-array in JSON.
+  product_terms   Json     @default("[]") @map("product_terms")
   source_filename String?  @map("source_filename") @db.VarChar(255)
   updated_by      String?  @map("updated_by") @db.VarChar(40)
   created_at      DateTime @default(now()) @map("created_at")

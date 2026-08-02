@@ -1140,7 +1140,10 @@
     "proposalEmpty": "Aucun terme propre clair trouvé dans le document",
     "proposalBanner": "L'IA a proposé {{count}} terme(s). Vérifiez-les ci-dessous, puis cliquez sur Enregistrer.",
     "suggestError": "Impossible de générer une proposition",
-    "unsupportedFile": "Type de fichier non pris en charge. Utilisez .txt, .md ou .docx, ou collez le texte (p. ex. depuis un PDF)."
+    "unsupportedFile": "Type de fichier non pris en charge. Utilisez .txt, .md ou .docx, ou collez le texte (p. ex. depuis un PDF).",
+    "productTermsTitle": "Noms de produits & termes clés",
+    "productTermsIntro": "Noms de produits et termes propres à l'entreprise prononcés lors des conversations. Ils améliorent la transcription (orthographe correcte des noms). Séparez par des virgules ou des retours à la ligne.",
+    "productTermsPlaceholder": "Ex. ProduitX, ServiceY, Nom de marque…"
   },
   "plans": {
     "dropHere": "Glissez un fichier ici ou cliquez pour sélectionner",

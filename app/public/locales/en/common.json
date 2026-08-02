@@ -1176,7 +1176,10 @@
     "proposalEmpty": "No clear company-specific terms found in the document",
     "proposalBanner": "AI proposed {{count}} term(s). Review them below, then click Save.",
     "suggestError": "Could not generate a suggestion",
-    "unsupportedFile": "File type not supported. Use .txt, .md or .docx, or paste the text (e.g. from a PDF)."
+    "unsupportedFile": "File type not supported. Use .txt, .md or .docx, or paste the text (e.g. from a PDF).",
+    "productTermsTitle": "Product names & key terms",
+    "productTermsIntro": "Company-specific product names and terms spoken in conversations. These are used to improve transcription (correct spelling of names). Separate with commas or new lines.",
+    "productTermsPlaceholder": "E.g. ProductX, ServiceY, Brand name…"
   },
   "plans": {
     "dropHere": "Drag a file here or click to select",
