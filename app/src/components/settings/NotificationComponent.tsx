@@ -30,6 +30,12 @@ const NotificationSettings = () => {
       content:
         t('notificationSettings.updatesInform'),
     },
+    // Maandelijks manager-rapport. Default AAN — dat spiegelt de verzendkant,
+    // die bij een ontbrekende voorkeur verstuurt (?? true), net als reminders.
+    monthlyReport: {
+      email: true,
+      content: t('notificationSettings.monthlyReportInform'),
+    },
     // more_activity_about_you: {
     //   push: false,
     //   email: false,

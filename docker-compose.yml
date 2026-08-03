@@ -154,6 +154,9 @@ services:
         apk add --no-cache curl > /dev/null
         echo "0 3 * * 0 curl -sf -H \"Authorization: Bearer $$CRON_SECRET\" \"$$APP_BASE_URL/api/cron/cleanup-recordings\" >> /var/log/cron.log 2>&1" > /etc/crontabs/root
         echo "5 * * * * curl -sf -m 290 -H \"Authorization: Bearer $$CRON_SECRET\" \"$$APP_BASE_URL/api/cron/prepare-followups\" >> /var/log/cron.log 2>&1" >> /etc/crontabs/root
+        # Maandrapport: elke maandag 03:15 aanroepen; de route zelf stopt vroeg
+        # tenzij het de eerste maandag van de maand is (cron kent dat begrip niet).
+        echo "15 3 * * 1 curl -sf -H \"Authorization: Bearer $$CRON_SECRET\" \"$$APP_BASE_URL/api/cron/monthly-manager-reports\" >> /var/log/cron.log 2>&1" >> /etc/crontabs/root
         crond -f -l 2
     networks:
       - nginx-proxy-manager_default

@@ -563,6 +563,21 @@ model DesktopSdkUpload {
   @@map("desktop_sdk_uploads")
 }
 
+/// Idempotentie voor het maandelijkse manager-rapport: één rij per
+/// (bedrijf, periode). Een herstart/dubbele cron-aanroep verstuurt zo nooit
+/// twee keer dezelfde maandmail.
+model MonthlyReportRun {
+  id               String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  company_id       String   @map("company_id") @db.VarChar(40)
+  /// Periode-sleutel, bijv. "2026-07"
+  period           String   @map("period") @db.VarChar(7)
+  recipients_count Int      @default(0) @map("recipients_count")
+  created_at       DateTime @default(now()) @map("created_at")
+
+  @@unique([company_id, period])
+  @@map("monthly_report_runs")
+}
+
 model CompanyTerminology {
   id              String   @id @default(uuid()) @map("id") @db.VarChar(40)
   company_id      String   @unique @map("company_id") @db.VarChar(40)

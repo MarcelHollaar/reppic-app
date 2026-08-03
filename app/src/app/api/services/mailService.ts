@@ -615,6 +615,129 @@ This is an automated error notification from ${appName}.
       // Don't throw - we don't want email failures to break the error flow
     }
   }
+
+  /**
+   * Maandelijks manager-rapport: highlights van het operationele + strategische
+   * dashboard in de mailbody, volledig rapport als PDF-bijlage. Wordt per
+   * manager in diens eigen taal verstuurd door de maandelijkse cron-route.
+   */
+  async sendMonthlyManagerReport(params: {
+    to: string;
+    managerName: string;
+    companyTitle: string;
+    /** Bijv. "juli 2026" — al gelokaliseerd door de aanroeper. */
+    periodLabel: string;
+    lang: string;
+    /** Korte management-teaser bovenaan de mail (uit de Management Summary). */
+    managementTeaser?: {
+      title: string;
+      body: string;
+      actionTitle: string;
+      action: string;
+    };
+    /** Blokken met heading + highlight-tegels (operationeel, strategisch). */
+    blocks: {
+      heading: string;
+      highlights: { label: string; value: string | number; delta?: string }[];
+      /** Korte AI-duiding van de maand-op-maand verandering (optioneel). */
+      momSummary?: string;
+    }[];
+    pdf: Buffer;
+    pdfFilename: string;
+  }) {
+    const { to, managerName, companyTitle, periodLabel, lang, blocks, pdf, pdfFilename, managementTeaser } = params;
+    await i18next.changeLanguage(lang);
+    const appUrl = process.env.APP_URL!;
+    const t = (key: string, opts?: Record<string, unknown>) =>
+      i18next.t(`emails.monthlyReport.${key}`, opts) as string;
+
+    const subject = capitalizeSubject(t("subject", { period: periodLabel }));
+
+    // Highlight-tegels per blok, inline-CSS tabellen (e-mailclient-veilig),
+    // in de bestaande huisstijl (#5870f6 accenten, witte kaarten).
+    const deltaColor = (delta: string) =>
+      delta.startsWith("▲") ? "#16a34a" : delta.startsWith("▼") ? "#dc2626" : "#94a3b8";
+    const blocksHtml = blocks
+      .map((block) => {
+        const tiles = block.highlights
+          .map(
+            (h) => `
+              <td align="center" style="padding:6px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;background:#f5f7ff;border:1px solid #e4e9ff;border-radius:10px;">
+                  <tr><td align="center" style="padding:14px 8px 2px;font-family:Arial,Helvetica,sans-serif;font-size:22px;font-weight:bold;color:#5870f6;">${h.value}</td></tr>
+                  ${
+                    h.delta
+                      ? `<tr><td align="center" style="padding:0 8px 2px;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;color:${deltaColor(h.delta)};">${h.delta}</td></tr>`
+                      : ""
+                  }
+                  <tr><td align="center" style="padding:0 8px 14px;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#64748b;">${h.label}</td></tr>
+                </table>
+              </td>`,
+          )
+          .join("");
+        const momLine = block.momSummary
+          ? `<tr><td style="padding:8px 2px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-style:italic;color:#475569;">${block.momSummary}</td></tr>`
+          : "";
+        return `
+          <tr><td style="padding:18px 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;color:#0f172a;">${block.heading}</td></tr>
+          <tr><td><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>${tiles}</tr></table></td></tr>
+          ${momLine}`;
+      })
+      .join("");
+
+    const esc = (v: string) =>
+      String(v ?? "").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c] as string);
+    const teaserHtml =
+      managementTeaser && (managementTeaser.body || managementTeaser.action)
+        ? `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;background:#f5f7ff;border:1px solid #e4e9ff;border-radius:10px;margin:6px 0 4px;"><tr><td style="padding:14px 16px;">
+             ${managementTeaser.body ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#334155;margin:0 0 8px;"><strong style="color:#5870f6;">${esc(managementTeaser.title)}:</strong> ${esc(managementTeaser.body)}</p>` : ""}
+             ${managementTeaser.action ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#334155;margin:0;white-space:pre-line;"><strong style="color:#5870f6;">${esc(managementTeaser.actionTitle)}:</strong> ${esc(managementTeaser.action)}</p>` : ""}
+           </td></tr></table>`
+        : "";
+
+    const htmlRaw = `
+      <p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#0f172a;margin:0 0 8px;">${t("greeting", { name: managerName })}</p>
+      <p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#334155;margin:0 0 4px;">${t("intro", { company: companyTitle, period: periodLabel })}</p>
+      ${teaserHtml}
+      <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#64748b;margin:0 0 8px;">${t("highlightsIntro")}</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">${blocksHtml}</table>
+      <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#334155;margin:16px 0 4px;">${t("fullReportNote")}</p>
+      <p style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#94a3b8;margin:16px 0 0;">${t("footerNote", { company: companyTitle })}</p>`;
+
+    const html = wrapBrandedEmailHtml(
+      htmlRaw,
+      appUrl,
+      i18next.t("emails.emailFooterAutomated", { appUrl }),
+    );
+
+    const textLines = [
+      t("greeting", { name: managerName }),
+      t("intro", { company: companyTitle, period: periodLabel }),
+      ...blocks.flatMap((b) => [
+        "",
+        b.heading,
+        ...b.highlights.map((h) => `- ${h.label}: ${h.value}`),
+      ]),
+      "",
+      t("fullReportNote"),
+    ];
+
+    const mailOptions = {
+      from: `"${process.env.APP_NAME}" <${process.env.EMAIL_FROM}>`,
+      to,
+      subject,
+      text: textLines.join("\n"),
+      html,
+      attachments: [
+        { filename: pdfFilename, content: pdf, contentType: "application/pdf" },
+      ],
+    };
+
+    // Bewust géén try/catch die de fout inslikt: de cron-route logt per
+    // manager het resultaat en telt successen/fouten.
+    await this.transporter.sendMail(mailOptions);
+    console.log(`[MailService] Monthly manager report sent to ${to}`);
+  }
 }
 
 export const mailService = new MailService();
