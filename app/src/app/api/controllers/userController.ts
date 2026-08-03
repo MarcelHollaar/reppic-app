@@ -170,7 +170,12 @@ export class UserController {
       // a co-manager ("manager") who then sees the same team.
       const inviteRole = body.role === "manager" ? "manager" : "user";
 
-      const results = await UserService.inviteUsers(emails, user, inviteRole);
+      const results = await UserService.inviteUsers(
+        emails,
+        user,
+        inviteRole,
+        body.learning_role
+      );
 
       return NextResponse.json(
         { message: "Invitations sent successfully.", data: results },

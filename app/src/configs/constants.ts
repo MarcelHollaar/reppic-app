@@ -10,6 +10,14 @@ export enum USER_ROLE {
   MANAGER = "manager",
   USER = "user",
 }
+
+// Leer-as (LMS-integratie), onafhankelijk van USER_ROLE.
+// Platform-superadmin is impliciet ook leer-superadmin.
+export enum LEARNING_ROLE {
+  NONE = "none",
+  LEARNER = "learner",
+  LEARNING_ADMIN = "learning_admin",
+}
 export enum TWIN_AI_STATUS {
   IN_PROCESS = 'in_process',
   COMPLETED = 'completed',
@@ -55,6 +63,10 @@ export const FAILED_UPLOAD_STATUS = [
 
 export const PLATFORM_SETTING_KEYS = {
   ANALYSIS_LITELLM_MODEL: "analysis_litellm_model",
+  // LMS-analyses, elk koppelbaar aan een eigen LiteLLM-model:
+  LMS_PATHGEN_LITELLM_MODEL: "lms_pathgen_litellm_model", // AI-leerpadgeneratie (chat)
+  LMS_TRANSLATION_LITELLM_MODEL: "lms_translation_litellm_model", // module-vertalingen (chat)
+  LMS_EMBEDDINGS_MODEL: "lms_embeddings_model", // kennisbibliotheek (embeddings)
 } as const;
 
 export enum CONVERSATION_STATUS {

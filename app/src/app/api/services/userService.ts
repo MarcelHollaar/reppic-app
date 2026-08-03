@@ -1,4 +1,4 @@
-import { STATUS, USER_ROLE } from "@/configs/constants";
+import { LEARNING_ROLE, STATUS, USER_ROLE } from "@/configs/constants";
 import bcrypt from "bcryptjs";
 import fs from "fs";
 import omit from "lodash/omit";
@@ -18,7 +18,6 @@ import {
 import { prisma } from "../utils/prisma";
 import { getFullUrl } from "../utils/urlHelper";
 import { mailService } from "./mailService";
-import { syncUserToLMSAsync, deleteUserFromLMSAsync } from "@/lib/services/lms-sync";
 
 export const UserService = {
   async getUserProfile(userId: string) {
@@ -108,6 +107,7 @@ export const UserService = {
       email: string;
       phone_number?: string;
       role?: string;
+      learning_role?: string;
       company_id?: string;
     },
     invitingUser: {
@@ -127,6 +127,7 @@ export const UserService = {
         email,
         phone_number,
         role,
+        learning_role,
         company_id: inputCompanyId,
       } = userData;
 
@@ -152,6 +153,20 @@ export const UserService = {
         : allowedForNonSuperAdmin.includes(requestedRoleName)
           ? requestedRoleName
           : USER_ROLE.USER;
+
+      // Leer-as (onafhankelijk van de sales-rol, beslissing B1): superadmin en
+      // learning_admin/contact-manager mogen t/m learning_admin toekennen binnen
+      // het eigen bedrijf; ongeldige of ontbrekende waarde valt terug op learner.
+      const validLearningRoles: string[] = [
+        LEARNING_ROLE.NONE,
+        LEARNING_ROLE.LEARNER,
+        LEARNING_ROLE.LEARNING_ADMIN,
+      ];
+      const learningRoleToAssign = (
+        learning_role && validLearningRoles.includes(learning_role)
+          ? learning_role
+          : LEARNING_ROLE.LEARNER
+      ) as LEARNING_ROLE;
 
       // Determine role to assign
       const selectedRole = await prisma.role.findFirst({
@@ -220,6 +235,7 @@ export const UserService = {
           email,
           phone_number: phone_number || null,
           role_id: selectedRole.id,
+          learning_role: learningRoleToAssign,
           status: STATUS.ACTIVE,
           is_verified: true,
           manager_id: managerId,
@@ -259,12 +275,24 @@ export const UserService = {
       company_id: string | null;
       lang_code?: string;
     },
-    role: "user" | "manager" = "user"
+    role: "user" | "manager" = "user",
+    learningRole: string = LEARNING_ROLE.LEARNER
   ) {
     const i18n = await initializeI18n();
     const t = i18n.t;
     const results = [];
     const roleName = role === "manager" ? "manager" : "user";
+    // Leer-as (B1): geldige waarde uit het formulier of terugvallen op learner.
+    const validLearningRoles: string[] = [
+      LEARNING_ROLE.NONE,
+      LEARNING_ROLE.LEARNER,
+      LEARNING_ROLE.LEARNING_ADMIN,
+    ];
+    const learningRoleToAssign = (
+      validLearningRoles.includes(learningRole)
+        ? learningRole
+        : LEARNING_ROLE.LEARNER
+    ) as LEARNING_ROLE;
     const inviteRole = await prisma.role.findFirst({
       where: { name: roleName },
     });
@@ -301,6 +329,7 @@ export const UserService = {
             password_token,
             manager_id: rootManagerId,
             role_id: inviteRole.id,
+            learning_role: learningRoleToAssign,
             status: STATUS.ACTIVE,
             company_id: manager?.company_id,
             is_verified: true,
@@ -375,22 +404,6 @@ export const UserService = {
         data: { password: hashedPassword },
         include: { company: true },
       });
-
-      // Sync updated password to LMS (fire and forget)
-      syncUserToLMSAsync(
-        {
-          id: updatedUser.id,
-          name: updatedUser.name,
-          email: updatedUser.email,
-          password: hashedPassword,
-          phone_number: updatedUser.phone_number,
-        },
-        updatedUser.company ? {
-          id: updatedUser.company.id,
-          name: updatedUser.company.title,
-          email: updatedUser.company.email,
-        } : null
-      );
 
       return new Response(
         JSON.stringify({ message: t("successMessages.passwordUpdated") }),
@@ -500,9 +513,6 @@ export const UserService = {
 
       // Finally, delete the user
       await prisma.user.delete({ where: { id: userId } });
-
-      // Delete user from LMS (fire and forget)
-      deleteUserFromLMSAsync(userId, user.email);
 
       return { message: "User and all associated data deleted successfully." };
     } catch (error: any) {

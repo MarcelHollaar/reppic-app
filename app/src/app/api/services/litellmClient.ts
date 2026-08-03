@@ -266,6 +266,29 @@ async function listRoutesViaOpenAiModels(
   return sortRoutesLikeLiteLLMUi(routes);
 }
 
+/**
+ * Alle model-id's op de gateway, ONgefilterd (dus inclusief embedding-modellen
+ * die de chat-filter van listAvailableModelRoutes bewust wegfiltert). Gebruikt
+ * door de LMS-embeddings-picker.
+ */
+export async function listAllModelIds(): Promise<string[]> {
+  const { baseUrl, apiKey } = getLiteLLMConfig();
+  const response = await fetch(`${baseUrl}/v1/models`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  if (!response.ok) {
+    throw new Error(
+      `LiteLLM /v1/models request failed with status ${response.status}`,
+    );
+  }
+  const body = (await response.json()) as { data?: Array<{ id?: string }> };
+  return (body.data ?? [])
+    .map((entry) => entry.id?.trim())
+    .filter((id): id is string => Boolean(id))
+    .sort();
+}
+
 export async function listAvailableModelRoutes(): Promise<LiteLLMModelRoute[]> {
   const { baseUrl, apiKey } = getLiteLLMConfig();
 
@@ -322,6 +345,11 @@ export async function completeChat(
         ? options.tag.trim() || defaultRoutingTagFromEnv
         : defaultRoutingTagFromEnv;
 
+  // Met een virtual key ontbreekt /model/info-metadata en weten we niet of een
+  // route adaptive thinking gebruikt (dan MOET temperature 1). Bij precies die
+  // 400-fout proberen we één keer opnieuw met de adaptieve temperatuur.
+  let forceAdaptiveTemperature = false;
+
   return withRetry(
     async () => {
       const response = await fetch(`${baseUrl}/v1/chat/completions`, {
@@ -334,7 +362,8 @@ export async function completeChat(
           model: modelAlias,
           messages: [{ role: "user", content: prompt }],
           temperature: resolveChatCompletionTemperature({
-            usesAdaptiveThinking: options?.usesAdaptiveThinking,
+            usesAdaptiveThinking:
+              options?.usesAdaptiveThinking || forceAdaptiveTemperature,
           }),
           max_tokens: 16000,
           response_format: { type: "json_object" },
@@ -343,6 +372,22 @@ export async function completeChat(
       });
 
       const body = (await response.json()) as ChatCompletionResponse;
+
+      if (
+        !response.ok &&
+        !forceAdaptiveTemperature &&
+        (body.error?.message || "").includes(
+          "`temperature` may only be set to 1",
+        )
+      ) {
+        forceAdaptiveTemperature = true;
+        const err = new Error(
+          "Route requires adaptive-thinking temperature; retrying with temperature 1",
+        ) as Error & { status?: number };
+        // 500 zodat withRetry dit als tijdelijke fout behandelt en opnieuw probeert.
+        err.status = 500;
+        throw err;
+      }
 
       if (!response.ok) {
         const message =

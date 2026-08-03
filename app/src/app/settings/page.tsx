@@ -3,6 +3,8 @@ import AdminsListing from "@/components/settings/AdminsListing";
 import AnalysisModelComponent from "@/components/settings/AnalysisModelComponent";
 import DashboardModelComponent from "@/components/settings/DashboardModelComponent";
 import TranscriptAnalysisPromptComponent from "@/components/settings/TranscriptAnalysisPromptComponent";
+import LmsChatModelComponent from "@/components/settings/LmsChatModelComponent";
+import LmsEmbeddingsModelComponent from "@/components/settings/LmsEmbeddingsModelComponent";
 import LanguageSettings from "@/components/settings/LanguageComponent";
 import NotificationSettings from "@/components/settings/NotificationComponent";
 import PasswordUpdateForm from "@/components/settings/PasswordResetComponent";
@@ -50,6 +52,34 @@ function SettingsPage() {
       label: t("settings.transcriptAnalysisPrompt"),
       value: "transcript-analysis-prompt",
       component: <TranscriptAnalysisPromptComponent />,
+    });
+    // LMS-analyses: elk aan een eigen LiteLLM-model koppelbaar.
+    dynamicTabs.push({
+      label: t("settings.lmsPathgenModel"),
+      value: "lms-pathgen-model",
+      component: (
+        <LmsChatModelComponent
+          endpoint="/api/platform-settings/lms-pathgen-model"
+          titleKey="lmsModelSettings.pathgenTitle"
+          noteKey="lmsModelSettings.pathgenNote"
+        />
+      ),
+    });
+    dynamicTabs.push({
+      label: t("settings.lmsTranslationModel"),
+      value: "lms-translation-model",
+      component: (
+        <LmsChatModelComponent
+          endpoint="/api/platform-settings/lms-translation-model"
+          titleKey="lmsModelSettings.translationTitle"
+          noteKey="lmsModelSettings.translationNote"
+        />
+      ),
+    });
+    dynamicTabs.push({
+      label: t("settings.lmsEmbeddingsModel"),
+      value: "lms-embeddings-model",
+      component: <LmsEmbeddingsModelComponent />,
     });
     dynamicTabs.push({
       label: t("common.admins"),

@@ -1,5 +1,3 @@
-import { USER_ROLE } from "@/configs/constants";
-import { loggedInUser, useUserRole } from "@/hooks/useUserRole";
 import i18n from "@/lib/i18n";
 import { t } from "i18next";
 import { useRouter } from "next/navigation";
@@ -25,11 +23,10 @@ export const ConversationProfileCard = ({
   createdAt,
 }: ConversationProfileCardProps) => {
   const router = useRouter();
-  const user = loggedInUser() as { email?: string } | null;
 
   const handleDevelopmentPlanClick = () => {
-    const lmsUrl = `${process.env.NEXT_PUBLIC_LMS_URL || ""}/login?email=${encodeURIComponent(user?.email || "")}&lang=${i18n.language}`;
-    window.open(lmsUrl, "_blank", "noopener,noreferrer");
+    // LMS is nu native onderdeel van de app: direct naar de leeromgeving.
+    router.push("/learning");
   };
 
   return (

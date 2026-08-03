@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { prisma } from "../utils/prisma";
+import { LEARNING_ROLE, USER_ROLE } from "@/configs/constants";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 // No insecure fallback: if JWT_SECRET is missing, auth fails closed (rather than
@@ -39,6 +40,7 @@ export async function authMiddleware(
         role: { select: { name: true } },
         company: { select: { email: true } },
         company_id: true,
+        learning_role: true,
       },
     });
 
@@ -70,4 +72,46 @@ export async function authMiddleware(
       { status: 403 }
     );
   }
+}
+
+/**
+ * Leer-as-variant van authMiddleware (LMS-integratie).
+ *
+ * Gate op de leer-rol (learning_role), onafhankelijk van de sales-rol.
+ * - Platform-superadmin passeert altijd (impliciet leer-superadmin).
+ * - requiredLearningRole = LEARNER: learner én learning_admin mogen door.
+ * - requiredLearningRole = LEARNING_ADMIN: alleen learning_admin (binnen eigen
+ *   bedrijf; tenant-checks gebeuren in de service-laag op company_id).
+ * Gebruik dit voor alle /api/learning/* endpoints.
+ */
+export async function learningAuthMiddleware(
+  req: NextRequest,
+  requiredLearningRole: LEARNING_ROLE = LEARNING_ROLE.LEARNER
+) {
+  const authCheck = await authMiddleware(req);
+  if (authCheck) return authCheck;
+
+  const user = (req as any).user;
+
+  // Platform-superadmin is impliciet leer-superadmin.
+  if (user?.role?.name === USER_ROLE.SUPER_ADMIN) {
+    return null;
+  }
+
+  const learningRole: string = user?.learning_role || LEARNING_ROLE.NONE;
+
+  const allowed =
+    requiredLearningRole === LEARNING_ROLE.LEARNER
+      ? learningRole === LEARNING_ROLE.LEARNER ||
+        learningRole === LEARNING_ROLE.LEARNING_ADMIN
+      : learningRole === LEARNING_ROLE.LEARNING_ADMIN;
+
+  if (!allowed) {
+    return NextResponse.json(
+      { message: "Unauthorized: Insufficient learning permissions" },
+      { status: 403 }
+    );
+  }
+
+  return null;
 }

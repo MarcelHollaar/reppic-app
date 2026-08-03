@@ -34,22 +34,33 @@ enum TranslationType {
   tag
 }
 
+// Leer-as (LMS-integratie): onafhankelijk van de sales-rol (User.role).
+// none = geen toegang tot leren; learner = volgt modules;
+// learning_admin = beheert leren binnen eigen bedrijf (mensen, toewijzingen).
+// Platform-superadmin (Role "superadmin") is impliciet ook leer-superadmin.
+enum LearningRole {
+  none
+  learner
+  learning_admin
+}
+
 model User {
-  id             String     @id @default(uuid()) @map("id") @db.VarChar(40)
-  name           String     @map("name") @db.VarChar(100)
-  email          String     @unique @map("email") @db.VarChar(255)
-  password       String?    @map("password") @db.VarChar(255)
-  phone_number   String?    @map("phone_number") @db.VarChar(30)
-  created_at     DateTime   @default(now()) @map("created_at")
-  updated_at     DateTime   @updatedAt @map("updated_at")
-  is_verified    Boolean    @default(false) @map("is_verified")
-  status         UserStatus @map("status")
-  role_id        String     @map("role_id") @db.VarChar(40)
-  company_id     String?    @map("company_id") @db.VarChar(40)
-  avatar         String?    @map("avatar") @db.VarChar(255)
-  manager_id     String?    @map("manager_id") @db.VarChar(40)
-  password_token String?    @unique @map("password_token") @db.VarChar(255)
-  lang_code      String?    @default("en") @map("lang_code") @db.VarChar(10)
+  id             String       @id @default(uuid()) @map("id") @db.VarChar(40)
+  name           String       @map("name") @db.VarChar(100)
+  email          String       @unique @map("email") @db.VarChar(255)
+  password       String?      @map("password") @db.VarChar(255)
+  phone_number   String?      @map("phone_number") @db.VarChar(30)
+  created_at     DateTime     @default(now()) @map("created_at")
+  updated_at     DateTime     @updatedAt @map("updated_at")
+  is_verified    Boolean      @default(false) @map("is_verified")
+  status         UserStatus   @map("status")
+  role_id        String       @map("role_id") @db.VarChar(40)
+  company_id     String?      @map("company_id") @db.VarChar(40)
+  avatar         String?      @map("avatar") @db.VarChar(255)
+  manager_id     String?      @map("manager_id") @db.VarChar(40)
+  password_token String?      @unique @map("password_token") @db.VarChar(255)
+  lang_code      String?      @default("en") @map("lang_code") @db.VarChar(10)
+  learning_role  LearningRole @default(learner) @map("learning_role")
 
   role                Role                @relation(fields: [role_id], references: [id])
   company             Company?            @relation(fields: [company_id], references: [id])
@@ -66,6 +77,13 @@ model User {
   user_customers      Customer[]
   notifications       Notification[]
   uploaded_videos     Video[]             @relation("UploadedVideos")
+
+  // LMS-integratie (leer-as)
+  learning_progress         LearningProgress[]
+  learning_certificates     LearningCertificate[]
+  module_assignments        UserModuleAssignment[]
+  learning_path_assignments UserLearningPathAssignment[]
+  library_favorites         LibraryFavorite[]
 
   @@map("users")
 }
@@ -332,18 +350,29 @@ model Prompt {
 }
 
 model Company {
-  id             String @id @default(uuid()) @map("id") @db.VarChar(40)
-  title          String @map("title") @db.VarChar(100)
-  contact_person String @map("contact_person") @db.VarChar(100)
-  email          String @map("email") @db.VarChar(100)
-  phone          String @map("phone") @db.VarChar(100)
-  notes          String @map("notes") @db.Text
-  max_users      Int    @default(0) @map("max_users")
+  id                   String  @id @default(uuid()) @map("id") @db.VarChar(40)
+  title                String  @map("title") @db.VarChar(100)
+  contact_person       String  @map("contact_person") @db.VarChar(100)
+  email                String  @map("email") @db.VarChar(100)
+  phone                String  @map("phone") @db.VarChar(100)
+  notes                String  @map("notes") @db.Text
+  max_users            Int     @default(0) @map("max_users")
+  // LMS-integratie: volledig-LMS aan/uit per bedrijf + Kennisbibliotheek-add-on
+  lms_enabled          Boolean @default(false) @map("lms_enabled")
+  has_knowledge_access Boolean @default(false) @map("has_knowledge_access")
 
   created_at DateTime @default(now()) @map("created_at")
   updated_at DateTime @updatedAt @map("updated_at")
 
   users User[]
+
+  // LMS-integratie
+  job_roles           JobRole[]
+  learning_categories LearningCategory[]
+  learning_modules    LearningModule[]
+  learning_paths      LearningPath[]
+  library_categories  LibraryCategory[]
+  library_documents   LibraryDocument[]
 
   @@unique([email, title], name: "email_title_unique")
   @@map("companies")
@@ -452,4 +481,318 @@ model CompanyTerminology {
   updated_at      DateTime @updatedAt @map("updated_at")
 
   @@map("company_terminology")
+}
+
+// ============================================================
+// LMS-integratie (Fase 2) — leerdomein, geport uit Reppic-LMS
+// (shared/schema.ts, Drizzle) naar app-conventies.
+// Identiteit (users/companies) komt uit de bestaande app-tabellen.
+// ============================================================
+
+enum LearningPathType {
+  sales_skills
+  knowledge
+}
+
+enum LearningContentType {
+  video
+  presentation
+  document
+}
+
+enum LearningProgressStatus {
+  not_started
+  in_progress
+  completed
+}
+
+model JobRole {
+  id          String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  name        String   @map("name") @db.VarChar(150)
+  description String?  @map("description") @db.Text
+  scope       String   @default("company") @map("scope") @db.VarChar(20) // 'global' | 'company'
+  company_id  String?  @map("company_id") @db.VarChar(40) // NULL = globale template
+  created_at  DateTime @default(now()) @map("created_at")
+  updated_at  DateTime @updatedAt @map("updated_at")
+
+  company          Company?        @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  module_job_roles ModuleJobRole[]
+  learning_paths   LearningPath[]
+
+  @@map("job_roles")
+}
+
+model LearningCategory {
+  id                 String           @id @default(uuid()) @map("id") @db.VarChar(40)
+  name               String           @map("name") @db.VarChar(150)
+  description        String?          @map("description") @db.Text
+  learning_path_type LearningPathType @default(knowledge) @map("learning_path_type")
+  company_id         String?          @map("company_id") @db.VarChar(40) // NULL = globaal (superadmin)
+  sort_order         Int              @default(0) @map("sort_order")
+  created_by         String?          @map("created_by") @db.VarChar(40)
+  created_at         DateTime         @default(now()) @map("created_at")
+  updated_at         DateTime         @updatedAt @map("updated_at")
+
+  company Company?         @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  modules LearningModule[]
+
+  @@unique([learning_path_type, company_id, name], name: "learning_category_scope_unique")
+  @@map("learning_categories")
+}
+
+model LearningModule {
+  id                 String              @id @default(uuid()) @map("id") @db.VarChar(40)
+  title              String              @map("title") @db.VarChar(255)
+  description        String              @map("description") @db.Text
+  duration           Int                 @default(0) @map("duration") // minuten
+  category_id        String?             @map("category_id") @db.VarChar(40)
+  learning_path_type LearningPathType    @default(knowledge) @map("learning_path_type")
+  phase              Int?                @map("phase") // alleen sales_skills: gespreksfase 1-8
+  company_id         String?             @map("company_id") @db.VarChar(40) // NULL = globaal
+  is_required        Boolean             @default(false) @map("is_required")
+  content_type       LearningContentType @default(video) @map("content_type")
+  video_url          String?             @map("video_url") @db.Text
+  video_embed_code   String?             @map("video_embed_code") @db.Text
+  thumbnail_url      String?             @map("thumbnail_url") @db.Text
+  original_language  String              @default("en") @map("original_language") @db.VarChar(10)
+  competency_tags    Json?               @map("competency_tags")
+  competency_summary String?             @map("competency_summary") @db.Text
+  created_by         String?             @map("created_by") @db.VarChar(40)
+  created_at         DateTime            @default(now()) @map("created_at")
+  updated_at         DateTime            @updatedAt @map("updated_at")
+  deleted_at         DateTime?           @map("deleted_at")
+
+  company                    Company?                    @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  category                   LearningCategory?           @relation(fields: [category_id], references: [id], onDelete: SetNull)
+  questions                  LearningQuestion[]
+  progress                   LearningProgress[]
+  certificates               LearningCertificate[]
+  module_job_roles           ModuleJobRole[]
+  path_modules               LearningPathModule[]
+  module_assignments         UserModuleAssignment[]
+  translations               LearningModuleTranslation[]
+
+  @@index([company_id], name: "idx_learning_modules_company")
+  @@index([learning_path_type], name: "idx_learning_modules_path_type")
+  @@map("learning_modules")
+}
+
+model LearningQuestion {
+  id             String  @id @default(uuid()) @map("id") @db.VarChar(40)
+  module_id      String  @map("module_id") @db.VarChar(40)
+  question       String  @map("question") @db.Text
+  options        Json    @map("options") // array van antwoordopties
+  correct_answer Int     @map("correct_answer") // index in options
+  explanation    String? @map("explanation") @db.Text
+  image_url      String? @map("image_url") @db.Text
+  order_index    Int     @default(0) @map("order_index")
+
+  module LearningModule @relation(fields: [module_id], references: [id], onDelete: Cascade)
+
+  @@index([module_id], name: "idx_learning_questions_module")
+  @@map("learning_questions")
+}
+
+model LearningProgress {
+  id               String                 @id @default(uuid()) @map("id") @db.VarChar(40)
+  user_id          String                 @map("user_id") @db.VarChar(40)
+  module_id        String                 @map("module_id") @db.VarChar(40)
+  status           LearningProgressStatus @default(not_started) @map("status")
+  progress         Int                    @default(0) @map("progress") // percentage 0-100
+  score            Int?                   @map("score") // quizscore percentage
+  answers          Json?                  @map("answers")
+  time_spent       Int                    @default(0) @map("time_spent") // minuten
+  started_at       DateTime?              @map("started_at")
+  completed_at     DateTime?              @map("completed_at")
+  last_accessed_at DateTime               @default(now()) @map("last_accessed_at")
+
+  user   User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  module LearningModule @relation(fields: [module_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, module_id], name: "learning_progress_user_module_unique")
+  @@map("learning_progress")
+}
+
+model LearningCertificate {
+  id                 String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  user_id            String   @map("user_id") @db.VarChar(40)
+  module_id          String   @map("module_id") @db.VarChar(40)
+  certificate_number String   @unique @map("certificate_number") @db.VarChar(64)
+  score              Int      @map("score")
+  completed_at       DateTime @default(now()) @map("completed_at")
+
+  user   User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  module LearningModule @relation(fields: [module_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id], name: "idx_learning_certificates_user")
+  @@map("learning_certificates")
+}
+
+model LearningPath {
+  id           String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  job_function String   @map("job_function") @db.VarChar(150)
+  level        String   @map("level") @db.VarChar(50)
+  description  String?  @map("description") @db.Text
+  job_role_id  String?  @map("job_role_id") @db.VarChar(40)
+  company_id   String?  @map("company_id") @db.VarChar(40) // NULL = globaal
+  created_at   DateTime @default(now()) @map("created_at")
+  updated_at   DateTime @updatedAt @map("updated_at")
+
+  company          Company?                     @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  job_role         JobRole?                     @relation(fields: [job_role_id], references: [id], onDelete: SetNull)
+  path_modules     LearningPathModule[]
+  path_assignments UserLearningPathAssignment[]
+
+  @@map("learning_paths")
+}
+
+model LearningPathModule {
+  id               String @id @default(uuid()) @map("id") @db.VarChar(40)
+  learning_path_id String @map("learning_path_id") @db.VarChar(40)
+  module_id        String @map("module_id") @db.VarChar(40)
+  order_index      Int    @default(0) @map("order_index")
+
+  learning_path LearningPath   @relation(fields: [learning_path_id], references: [id], onDelete: Cascade)
+  module        LearningModule @relation(fields: [module_id], references: [id], onDelete: Cascade)
+
+  @@unique([learning_path_id, module_id], name: "learning_path_module_unique")
+  @@map("learning_path_modules")
+}
+
+model ModuleJobRole {
+  id          String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  module_id   String   @map("module_id") @db.VarChar(40)
+  job_role_id String   @map("job_role_id") @db.VarChar(40)
+  visibility  String   @default("required") @map("visibility") @db.VarChar(20) // 'required' | 'recommended'
+  created_at  DateTime @default(now()) @map("created_at")
+
+  module   LearningModule @relation(fields: [module_id], references: [id], onDelete: Cascade)
+  job_role JobRole        @relation(fields: [job_role_id], references: [id], onDelete: Cascade)
+
+  @@unique([module_id, job_role_id], name: "module_job_role_unique")
+  @@map("module_job_roles")
+}
+
+model UserModuleAssignment {
+  id          String    @id @default(uuid()) @map("id") @db.VarChar(40)
+  user_id     String    @map("user_id") @db.VarChar(40)
+  module_id   String    @map("module_id") @db.VarChar(40)
+  assigned_by String?   @map("assigned_by") @db.VarChar(40)
+  assigned_at DateTime  @default(now()) @map("assigned_at")
+  due_date    DateTime? @map("due_date")
+  is_required Boolean   @default(true) @map("is_required")
+
+  user   User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  module LearningModule @relation(fields: [module_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, module_id], name: "user_module_assignment_unique")
+  @@map("user_module_assignments")
+}
+
+model UserLearningPathAssignment {
+  id               String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  user_id          String   @map("user_id") @db.VarChar(40)
+  learning_path_id String   @map("learning_path_id") @db.VarChar(40)
+  assigned_by      String?  @map("assigned_by") @db.VarChar(40)
+  assigned_at      DateTime @default(now()) @map("assigned_at")
+
+  user          User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  learning_path LearningPath @relation(fields: [learning_path_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, learning_path_id], name: "user_learning_path_assignment_unique")
+  @@map("user_learning_path_assignments")
+}
+
+// Kennisbibliotheek (add-on, gate = Company.has_knowledge_access)
+model LibraryCategory {
+  id          String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  name        String   @map("name") @db.VarChar(150)
+  description String?  @map("description") @db.Text
+  icon        String?  @map("icon") @db.VarChar(50)
+  company_id  String   @map("company_id") @db.VarChar(40)
+  sort_order  Int      @default(0) @map("sort_order")
+  created_by  String?  @map("created_by") @db.VarChar(40)
+  created_at  DateTime @default(now()) @map("created_at")
+
+  company   Company           @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  documents LibraryDocument[]
+
+  @@map("library_categories")
+}
+
+model LibraryDocument {
+  id            String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  title         String   @map("title") @db.VarChar(255)
+  description   String?  @map("description") @db.Text
+  category_id   String?  @map("category_id") @db.VarChar(40)
+  company_id    String   @map("company_id") @db.VarChar(40)
+  content_type  String   @default("document") @map("content_type") @db.VarChar(20) // 'document' | 'video' | 'presentation' | 'link'
+  file_url      String?  @map("file_url") @db.Text
+  external_url  String?  @map("external_url") @db.Text
+  thumbnail_url String?  @map("thumbnail_url") @db.Text
+  file_size     Int?     @map("file_size")
+  mime_type     String?  @map("mime_type") @db.VarChar(100)
+  tags          Json?    @map("tags")
+  is_published  Boolean  @default(true) @map("is_published")
+  view_count    Int      @default(0) @map("view_count")
+  uploaded_by   String?  @map("uploaded_by") @db.VarChar(40)
+  created_at    DateTime @default(now()) @map("created_at")
+  updated_at    DateTime @updatedAt @map("updated_at")
+
+  company   Company                   @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  category  LibraryCategory?          @relation(fields: [category_id], references: [id], onDelete: SetNull)
+  favorites LibraryFavorite[]
+  embedding LibraryDocumentEmbedding?
+
+  @@index([company_id], name: "idx_library_documents_company")
+  @@map("library_documents")
+}
+
+model LibraryFavorite {
+  id          String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  user_id     String   @map("user_id") @db.VarChar(40)
+  document_id String   @map("document_id") @db.VarChar(40)
+  created_at  DateTime @default(now()) @map("created_at")
+
+  user     User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  document LibraryDocument @relation(fields: [document_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, document_id], name: "library_favorite_unique")
+  @@map("library_favorites")
+}
+
+// AI-uitbreiding: embeddings voor semantisch zoeken in de Kennisbibliotheek.
+// Opslag als JSON-string van de vector (zelfde aanpak als het oude LMS);
+// model/dimensie configureerbaar via LEARNING_EMBEDDINGS_MODEL.
+model LibraryDocumentEmbedding {
+  id           String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  document_id  String   @unique @map("document_id") @db.VarChar(40)
+  company_id   String   @map("company_id") @db.VarChar(40)
+  embedding    String   @map("embedding") @db.Text
+  text_content String?  @map("text_content") @db.Text
+  model        String   @map("model") @db.VarChar(100)
+  indexed_at   DateTime @default(now()) @map("indexed_at")
+  updated_at   DateTime @updatedAt @map("updated_at")
+
+  document LibraryDocument @relation(fields: [document_id], references: [id], onDelete: Cascade)
+
+  @@index([company_id], name: "idx_library_doc_embeddings_company")
+  @@map("library_document_embeddings")
+}
+
+// AI-uitbreiding: meertalige module-content (port van het oude LMS
+// translations-mechanisme). content = { title, description,
+// questions: [{ question, options[], explanation }] } in de doeltaal.
+model LearningModuleTranslation {
+  id         String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  module_id  String   @map("module_id") @db.VarChar(40)
+  language   String   @map("language") @db.VarChar(10)
+  content    Json     @map("content")
+  created_at DateTime @default(now()) @map("created_at")
+  updated_at DateTime @updatedAt @map("updated_at")
+
+  module LearningModule @relation(fields: [module_id], references: [id], onDelete: Cascade)
+
+  @@unique([module_id, language], name: "learning_module_translation_unique")
+  @@map("learning_module_translations")
 }

@@ -2,6 +2,7 @@
 import AdminDashboard from "@/components/dashboard/AdminDashboard";
 import { CalendarCard } from "@/components/dashboard/CalendarCard";
 import RecentConversationsCard from "@/components/dashboard/RecentConversationsCard";
+import LearningCard from "@/components/dashboard/LearningCard";
 import { IndividualPicaSection } from "@/components/salesDashboards/IndividualPicaSection";
 import StatCard from "@/components/dashboard/StatCard";
 import { TEAM_STATS, USER_ROLE, USER_STATS } from "@/configs/constants";
@@ -356,6 +357,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ username }) => {
                 Falls back to the logged-in user when no team member is selected. */}
             <div className="tw-mt-6">
               <IndividualPicaSection userId={selectedUser || (user as any)?.id} />
+            </div>
+            {/* Leerdata-tegel (LMS-integratie): eigen leervoortgang +
+                AI-aanbeveling. Rendert alleen voor gebruikers met leer-toegang. */}
+            <div className="tw-mt-6">
+              <LearningCard />
             </div>
           </div>
         </>

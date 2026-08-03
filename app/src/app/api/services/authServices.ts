@@ -12,7 +12,6 @@ import {
 } from "@/configs/constants";
 import { initializeI18n } from "../helpers/userHelper";
 import { UserModel } from "../models/user";
-import { syncUserToLMSAsync } from "@/lib/services/lms-sync";
 const JWT_SECRET = process.env.JWT_SECRET;
 
 type UserWithRole = Awaited<ReturnType<typeof prisma.user.findUnique>> & {
@@ -137,7 +136,7 @@ export const AuthService = {
         where: { email },
         include: {
           role: true,
-          company: { select: { email: true, max_users: true } },
+          company: { select: { email: true, max_users: true, lms_enabled: true, has_knowledge_access: true } },
         },
       });
 
@@ -306,7 +305,7 @@ export const AuthService = {
         where: { email },
         include: {
           role: true,
-          company: { select: { email: true, max_users: true } },
+          company: { select: { email: true, max_users: true, lms_enabled: true, has_knowledge_access: true } },
         },
       });
 
@@ -522,18 +521,6 @@ export const AuthService = {
           is_verified: false,
         },
       });
-
-      // Sync user to LMS (fire and forget)
-      syncUserToLMSAsync(
-        {
-          id: newUser.id,
-          name: newUser.name,
-          email: newUser.email,
-          password: hashedPassword, // Use the hashed password
-          phone_number: newUser.phone_number,
-        },
-        null, // No company for self-registered users
-      );
 
       const otp = crypto.randomInt(100000, 1000000).toString();
 
@@ -853,24 +840,6 @@ export const AuthService = {
           company: true,
         },
       });
-
-      // Sync user to LMS (fire and forget)
-      syncUserToLMSAsync(
-        {
-          id: updatedUser.id,
-          name: updatedUser.name,
-          email: updatedUser.email,
-          password: hashedPassword,
-          phone_number: updatedUser.phone_number,
-        },
-        updatedUser.company
-          ? {
-              id: updatedUser.company.id,
-              name: updatedUser.company.title,
-              email: updatedUser.company.email,
-            }
-          : null,
-      );
 
       // Send email to manager
       if (user.manager) {
