@@ -23,6 +23,10 @@ const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [inviteRole, setInviteRole] = useState<"user" | "manager">("user");
+  // Leer-as (LMS-integratie): onafhankelijk van de sales-rol toe te kennen.
+  const [inviteLearningRole, setInviteLearningRole] = useState<
+    "learner" | "learning_admin" | "none"
+  >("learner");
   const { t } = useTranslation('common');
   if (!isOpen) return null;
 
@@ -91,7 +95,11 @@ const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ emails: validEmails, role: inviteRole }),
+        body: JSON.stringify({
+          emails: validEmails,
+          role: inviteRole,
+          learning_role: inviteLearningRole,
+        }),
       });
 
       const result = await response.json();
@@ -181,6 +189,31 @@ const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
                   {t('inviteMember.roleManagerHint')}
                 </p>
               )}
+            </div>
+
+            {/* Leer-rol (leer-as, onafhankelijk van de sales-rol) */}
+            <div className="tw-mb-3">
+              <p className="tw-text-[10px] tw-font-semibold tw-text-gray-400 tw-uppercase tw-tracking-widest tw-mb-1.5" suppressHydrationWarning>
+                {t('learning.learningRole')}
+              </p>
+              <div className="tw-inline-flex tw-gap-1 tw-rounded-xl tw-p-1" style={{ backgroundColor: "#EBEBEB" }}>
+                {(["learner", "learning_admin", "none"] as const).map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setInviteLearningRole(r)}
+                    className={`tw-px-3 tw-py-1.5 tw-text-sm tw-rounded-lg tw-transition-all ${
+                      inviteLearningRole === r
+                        ? "tw-bg-white tw-text-gray-900 tw-font-semibold"
+                        : "tw-text-gray-500 hover:tw-text-gray-700"
+                    }`}
+                    style={inviteLearningRole === r ? { boxShadow: "0 1px 4px rgba(0,0,0,0.10)" } : {}}
+                    suppressHydrationWarning
+                  >
+                    {t(`learning.learningRole_${r}`)}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="tw-flex tw-mb-2">

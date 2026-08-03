@@ -57,20 +57,8 @@ export default function Sidenav({}: PropTypes) {
   const collapseHeaderClasses = "tw-border-b-0 !tw-p-3 tw-rounded-xl hover:tw-bg-[#F5F6F8] tw-text-inherit hover:tw-text-gray-900";
   const activeRouteClasses = "tw-bg-[#5971F6] !tw-text-white hover:tw-bg-[#4A60E8] tw-rounded-xl";
   const handleLogout = async () => {
-    const token = localStorage.getItem("token");
-
-    // Invalidate LMS sessions before clearing local state
-    if (token) {
-      try {
-        await fetch("/api/lms/logout", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } catch (err) {
-        console.error("Failed to logout from LMS:", err);
-      }
-    }
-
+    // LMS is nu native onderdeel van de app: geen aparte LMS-sessie meer
+    // om te invalideren bij uitloggen.
     localStorage.removeItem("user_data");
     localStorage.removeItem("token");
 

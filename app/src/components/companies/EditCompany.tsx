@@ -242,6 +242,9 @@ export function EditCompany({ companyId }) {
     notes: "",
     maxUsers: 0,
   });
+  // LMS-vlaggen (alleen superadmin mag ze wijzigen; server negeert ze anders)
+  const [lmsEnabled, setLmsEnabled] = useState(false);
+  const [hasKnowledgeAccess, setHasKnowledgeAccess] = useState(false);
 
   // Validation errors state
   const [errors, setErrors] = useState({
@@ -300,6 +303,8 @@ export function EditCompany({ companyId }) {
         notes: company.notes || "",
         maxUsers: company.max_users || "",
       });
+      setLmsEnabled(Boolean(company.lms_enabled));
+      setHasKnowledgeAccess(Boolean(company.has_knowledge_access));
       // set custom breadcrumbs for the page
       setBreadcrumbs( [
         { label: isContactPerson ? "My Company" : "Companies", href: isContactPerson ? "#" : "/companies" },
@@ -471,6 +476,8 @@ export function EditCompany({ companyId }) {
         phone: formData.phone,
         notes: formData.notes,
         max_users: parseInt(formData.maxUsers),
+        lms_enabled: lmsEnabled,
+        has_knowledge_access: hasKnowledgeAccess,
         // Include existing users (not removed)
         users: existingUsers
           .filter((user) => !removedUsers.includes(user.id))
@@ -767,6 +774,34 @@ export function EditCompany({ companyId }) {
                     </p>
                   )}
                 </div>
+
+                {/* LMS-vlaggen: alleen zichtbaar/instelbaar voor superadmin */}
+                {userRole === USER_ROLE.SUPER_ADMIN && (
+                  <div className="tw-w-full tw-mb-4 tw-flex tw-flex-col tw-gap-2">
+                    <label className="tw-flex tw-items-center tw-gap-2 tw-cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={lmsEnabled}
+                        onChange={(e) => setLmsEnabled(e.target.checked)}
+                        className="tw-h-4 tw-w-4"
+                      />
+                      <span className="tw-text-sm tw-font-semibold tw-text-black">
+                        {t("learning.lmsEnabled")}
+                      </span>
+                    </label>
+                    <label className="tw-flex tw-items-center tw-gap-2 tw-cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={hasKnowledgeAccess}
+                        onChange={(e) => setHasKnowledgeAccess(e.target.checked)}
+                        className="tw-h-4 tw-w-4"
+                      />
+                      <span className="tw-text-sm tw-font-semibold tw-text-black">
+                        {t("learning.knowledgeAccess")}
+                      </span>
+                    </label>
+                  </div>
+                )}
               </div>
             </div>
 

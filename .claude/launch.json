@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "reppic-app",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "/Users/gebruiker/Reppic-integratie-werkkopie/repo/app", "--", "-p", "3010"],
+      "port": 3010
+    }
+  ]
+}

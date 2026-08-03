@@ -1,0 +1,619 @@
+"use client";
+/**
+ * /learning/manage/module[?id=…] — module aanmaken/bewerken incl. quizvragen
+ * (Fase 5). Superadmin maakt globale content (sales_skills + knowledge);
+ * learning_admin alleen knowledge voor het eigen bedrijf (server-side check).
+ */
+import React, { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslation } from "react-i18next";
+import { toast, ToastContainer } from "react-toastify";
+import authMiddleware from "@/middleware/authMiddleware";
+import { getAuthHeaders } from "@/utils/getAuthHeaders";
+import { useUserRole } from "@/hooks/useUserRole";
+import { USER_ROLE } from "@/configs/constants";
+import { ChevronLeftIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
+
+type QuestionForm = {
+  id?: string;
+  question: string;
+  options: string[];
+  correct_answer: number;
+  explanation: string;
+};
+
+type CategoryItem = { id: string; name: string; learning_path_type: string };
+
+function ModuleFormInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const moduleId = searchParams.get("id");
+  const { t } = useTranslation("common");
+  const userRole = useUserRole();
+  const isSuperAdmin = userRole === USER_ROLE.SUPER_ADMIN;
+
+  const [loading, setLoading] = useState(Boolean(moduleId));
+  const [saving, setSaving] = useState(false);
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    duration: 5,
+    learning_path_type: isSuperAdmin ? "sales_skills" : "knowledge",
+    phase: "" as string,
+    category_id: "",
+    content_type: "video",
+    video_url: "",
+    video_embed_code: "",
+    thumbnail_url: "",
+    is_required: false,
+  });
+  const [questions, setQuestions] = useState<QuestionForm[]>([]);
+  // Functierol-koppeling (uitbreiding B): job_role_id -> 'required'|'recommended'
+  const [jobRoles, setJobRoles] = useState<{ id: string; name: string }[]>([]);
+  const [roleCouplings, setRoleCouplings] = useState<Record<string, string>>({});
+  // Meertalige content (AI-uitbreiding): welke talen zijn al vertaald.
+  const [translatedLangs, setTranslatedLangs] = useState<string[]>([]);
+  const [translating, setTranslating] = useState(false);
+  const ALL_LANGS = ["en", "nl", "de", "fr", "es", "it"];
+
+  useEffect(() => {
+    const headers = getAuthHeaders();
+    if (!headers) return;
+    fetch("/api/learning/categories", { headers })
+      .then((r) => r.json())
+      .then((res) => setCategories(res.data || []))
+      .catch(() => {});
+    fetch("/api/learning/job-roles", { headers })
+      .then((r) => (r.ok ? r.json() : { data: [] }))
+      .then((res) => setJobRoles(res.data || []))
+      .catch(() => {});
+    if (moduleId) {
+      fetch(`/api/learning/manage/modules/${moduleId}/job-roles`, { headers })
+        .then((r) => (r.ok ? r.json() : { data: [] }))
+        .then((res) => {
+          const map: Record<string, string> = {};
+          (res.data || []).forEach((c: any) => {
+            map[c.job_role_id] = c.visibility;
+          });
+          setRoleCouplings(map);
+        })
+        .catch(() => {});
+      fetch(`/api/learning/manage/modules/${moduleId}/translations`, { headers })
+        .then((r) => (r.ok ? r.json() : { data: [] }))
+        .then((res) => setTranslatedLangs((res.data || []).map((x: any) => x.language)))
+        .catch(() => {});
+    }
+    if (moduleId) {
+      fetch(`/api/learning/manage/modules/${moduleId}`, { headers })
+        .then((r) => (r.ok ? r.json() : Promise.reject()))
+        .then((res) => {
+          const m = res.data;
+          setForm({
+            title: m.title,
+            description: m.description || "",
+            duration: m.duration,
+            learning_path_type: m.learning_path_type,
+            phase: m.phase != null ? String(m.phase) : "",
+            category_id: m.category_id || "",
+            content_type: m.content_type,
+            video_url: m.video_url || "",
+            video_embed_code: m.video_embed_code || "",
+            thumbnail_url: m.thumbnail_url || "",
+            is_required: m.is_required,
+          });
+          setQuestions(
+            (m.questions || []).map((q: any) => ({
+              id: q.id,
+              question: q.question,
+              options: q.options || ["", "", "", ""],
+              correct_answer: q.correct_answer,
+              explanation: q.explanation || "",
+            })),
+          );
+        })
+        .catch(() => router.replace("/learning/manage"))
+        .finally(() => setLoading(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moduleId]);
+
+  const set = (key: string, value: any) =>
+    setForm((f) => ({ ...f, [key]: value }));
+
+  const generateTranslations = async (langs: string[]) => {
+    if (!moduleId || langs.length === 0) return;
+    const headers = getAuthHeaders();
+    if (!headers) return;
+    setTranslating(true);
+    try {
+      const res = await fetch(
+        `/api/learning/manage/modules/${moduleId}/translations`,
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ languages: langs }),
+        },
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message);
+      setTranslatedLangs((prev) =>
+        Array.from(new Set([...prev, ...json.data.languages])),
+      );
+      toast.success(`✓ ${json.data.languages.join(", ")}`);
+    } catch {
+      toast.error(t("learning.aiGenerateFailed"));
+    }
+    setTranslating(false);
+  };
+
+  const deleteTranslation = async (lang: string) => {
+    if (!moduleId) return;
+    const headers = getAuthHeaders();
+    if (!headers) return;
+    const res = await fetch(
+      `/api/learning/manage/modules/${moduleId}/translations?language=${lang}`,
+      { method: "DELETE", headers },
+    );
+    if (res.ok) {
+      setTranslatedLangs((prev) => prev.filter((l) => l !== lang));
+    }
+  };
+
+  const addQuestion = () =>
+    setQuestions((q) => [
+      ...q,
+      { question: "", options: ["", "", "", ""], correct_answer: 0, explanation: "" },
+    ]);
+
+  const save = async () => {
+    if (!form.title.trim()) {
+      toast.error(t("learning.title"));
+      return;
+    }
+    const headers = getAuthHeaders();
+    if (!headers) return;
+    setSaving(true);
+    const payload = {
+      ...form,
+      duration: Number(form.duration) || 0,
+      phase: form.phase ? parseInt(form.phase, 10) : null,
+      category_id: form.category_id || null,
+      questions: questions
+        .filter((q) => q.question.trim() && q.options.some((o) => o.trim()))
+        .map((q, i) => ({
+          question: q.question,
+          options: q.options.filter((o) => o.trim()),
+          correct_answer: q.correct_answer,
+          explanation: q.explanation || null,
+          order_index: i,
+        })),
+    };
+    const res = await fetch(
+      moduleId
+        ? `/api/learning/manage/modules/${moduleId}`
+        : "/api/learning/manage/modules",
+      {
+        method: moduleId ? "PUT" : "POST",
+        headers,
+        body: JSON.stringify(payload),
+      },
+    );
+    if (res.ok) {
+      // Functierol-koppelingen apart opslaan (uitbreiding B); het POST-antwoord
+      // levert het module-id voor nieuwe modules.
+      const saved = await res.json().catch(() => ({}));
+      const savedId = moduleId || saved?.data?.id;
+      if (savedId && jobRoles.length > 0) {
+        await fetch(`/api/learning/manage/modules/${savedId}/job-roles`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            job_roles: Object.entries(roleCouplings).map(
+              ([job_role_id, visibility]) => ({ job_role_id, visibility }),
+            ),
+          }),
+        }).catch(() => {});
+      }
+      setSaving(false);
+      toast.success("✓");
+      router.push("/learning/manage");
+    } else {
+      setSaving(false);
+      const json = await res.json().catch(() => ({}));
+      toast.error(json.message || "Error");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="tw-flex tw-justify-center tw-py-20">
+        <div className="tw-animate-spin tw-rounded-full tw-h-8 tw-w-8 tw-border-b-2 tw-border-[#5971F6]" />
+      </div>
+    );
+  }
+
+  const inputCls =
+    "tw-w-full tw-px-4 tw-py-2 tw-rounded-xl tw-bg-white tw-border tw-border-gray-300 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500 tw-text-sm";
+
+  return (
+    <div className="tw-p-6 tw-max-w-3xl tw-mx-auto">
+      <ToastContainer position="top-right" autoClose={3000} />
+      <button
+        onClick={() => router.push("/learning/manage")}
+        className="tw-flex tw-items-center tw-gap-1 tw-text-sm tw-text-gray-500 hover:tw-text-gray-800 tw-mb-4"
+      >
+        <ChevronLeftIcon className="tw-w-4 tw-h-4" />{" "}
+        {t("learning.manageModules")}
+      </button>
+      <h1 className="tw-text-2xl tw-font-bold tw-text-gray-900 tw-mb-6">
+        {moduleId ? t("learning.editModule") : t("learning.addModule")}
+      </h1>
+
+      <div className="tw-flex tw-flex-col tw-gap-4 tw-bg-white tw-rounded-2xl tw-border tw-border-gray-200 tw-p-6">
+        <div>
+          <label className="tw-text-sm tw-font-semibold tw-text-gray-800">
+            {t("learning.title")}
+          </label>
+          <input
+            className={inputCls}
+            value={form.title}
+            onChange={(e) => set("title", e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="tw-text-sm tw-font-semibold tw-text-gray-800">
+            {t("companiesListing.notes")}
+          </label>
+          <textarea
+            className={`${inputCls} tw-h-24`}
+            value={form.description}
+            onChange={(e) => set("description", e.target.value)}
+          />
+        </div>
+
+        <div className="tw-grid tw-grid-cols-2 md:tw-grid-cols-4 tw-gap-3">
+          {isSuperAdmin && (
+            <div>
+              <label className="tw-text-sm tw-font-semibold tw-text-gray-800">
+                Type
+              </label>
+              <select
+                className={inputCls}
+                value={form.learning_path_type}
+                onChange={(e) => set("learning_path_type", e.target.value)}
+              >
+                <option value="sales_skills">{t("learning.salesSkills")}</option>
+                <option value="knowledge">{t("learning.knowledge")}</option>
+              </select>
+            </div>
+          )}
+          {form.learning_path_type === "sales_skills" && (
+            <div>
+              <label className="tw-text-sm tw-font-semibold tw-text-gray-800">
+                {t("learning.phase")}
+              </label>
+              <select
+                className={inputCls}
+                value={form.phase}
+                onChange={(e) => set("phase", e.target.value)}
+              >
+                <option value="">—</option>
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div>
+            <label className="tw-text-sm tw-font-semibold tw-text-gray-800">
+              {t("learning.category")}
+            </label>
+            <select
+              className={inputCls}
+              value={form.category_id}
+              onChange={(e) => set("category_id", e.target.value)}
+            >
+              <option value="">—</option>
+              {categories
+                .filter(
+                  (c) => c.learning_path_type === form.learning_path_type,
+                )
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div>
+            <label className="tw-text-sm tw-font-semibold tw-text-gray-800">
+              {t("learning.minutes")}
+            </label>
+            <input
+              type="number"
+              className={inputCls}
+              value={form.duration}
+              onChange={(e) => set("duration", e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-3">
+          <div>
+            <label className="tw-text-sm tw-font-semibold tw-text-gray-800">
+              Content
+            </label>
+            <select
+              className={inputCls}
+              value={form.content_type}
+              onChange={(e) => set("content_type", e.target.value)}
+            >
+              <option value="video">Video</option>
+              <option value="presentation">Presentation</option>
+              <option value="document">Document</option>
+            </select>
+          </div>
+          <div>
+            <label className="tw-text-sm tw-font-semibold tw-text-gray-800">
+              Video URL
+            </label>
+            <input
+              className={inputCls}
+              value={form.video_url}
+              onChange={(e) => set("video_url", e.target.value)}
+              placeholder="https://…"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="tw-text-sm tw-font-semibold tw-text-gray-800">
+            Embed code
+          </label>
+          <textarea
+            className={`${inputCls} tw-h-20 tw-font-mono tw-text-xs`}
+            value={form.video_embed_code}
+            onChange={(e) => set("video_embed_code", e.target.value)}
+            placeholder="<iframe …></iframe>"
+          />
+        </div>
+        <label className="tw-flex tw-items-center tw-gap-2 tw-cursor-pointer">
+          <input
+            type="checkbox"
+            checked={form.is_required}
+            onChange={(e) => set("is_required", e.target.checked)}
+            className="tw-h-4 tw-w-4"
+          />
+          <span className="tw-text-sm tw-text-gray-700">
+            {t("learning.required")}
+          </span>
+        </label>
+      </div>
+
+      {/* Quizvragen */}
+      <div className="tw-mt-6">
+        <div className="tw-flex tw-items-center tw-justify-between tw-mb-3">
+          <h2 className="tw-text-lg tw-font-bold tw-text-gray-900">
+            {t("learning.questions")}
+          </h2>
+          <button
+            onClick={addQuestion}
+            className="tw-flex tw-items-center tw-gap-1 tw-text-sm tw-font-semibold tw-text-[#5971F6] hover:tw-underline"
+          >
+            <PlusIcon className="tw-w-4 tw-h-4" /> {t("learning.question")}
+          </button>
+        </div>
+        <div className="tw-flex tw-flex-col tw-gap-4">
+          {questions.map((q, qi) => (
+            <div
+              key={qi}
+              className="tw-bg-white tw-rounded-2xl tw-border tw-border-gray-200 tw-p-5"
+            >
+              <div className="tw-flex tw-items-start tw-gap-2 tw-mb-3">
+                <input
+                  className={inputCls}
+                  placeholder={`${t("learning.question")} ${qi + 1}`}
+                  value={q.question}
+                  onChange={(e) =>
+                    setQuestions((list) =>
+                      list.map((x, i) =>
+                        i === qi ? { ...x, question: e.target.value } : x,
+                      ),
+                    )
+                  }
+                />
+                <button
+                  onClick={() =>
+                    setQuestions((list) => list.filter((_, i) => i !== qi))
+                  }
+                  className="tw-p-2 tw-text-gray-400 hover:tw-text-red-500"
+                >
+                  <TrashIcon className="tw-w-4 tw-h-4" />
+                </button>
+              </div>
+              <div className="tw-flex tw-flex-col tw-gap-2">
+                {q.options.map((opt, oi) => (
+                  <div key={oi} className="tw-flex tw-items-center tw-gap-2">
+                    <input
+                      type="radio"
+                      name={`correct-${qi}`}
+                      checked={q.correct_answer === oi}
+                      onChange={() =>
+                        setQuestions((list) =>
+                          list.map((x, i) =>
+                            i === qi ? { ...x, correct_answer: oi } : x,
+                          ),
+                        )
+                      }
+                      title={t("learning.passed")}
+                    />
+                    <input
+                      className={inputCls}
+                      placeholder={`${String.fromCharCode(65 + oi)}.`}
+                      value={opt}
+                      onChange={(e) =>
+                        setQuestions((list) =>
+                          list.map((x, i) =>
+                            i === qi
+                              ? {
+                                  ...x,
+                                  options: x.options.map((o, j) =>
+                                    j === oi ? e.target.value : o,
+                                  ),
+                                }
+                              : x,
+                          ),
+                        )
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+              <input
+                className={`${inputCls} tw-mt-3`}
+                placeholder="Uitleg (optioneel)"
+                value={q.explanation}
+                onChange={(e) =>
+                  setQuestions((list) =>
+                    list.map((x, i) =>
+                      i === qi ? { ...x, explanation: e.target.value } : x,
+                    ),
+                  )
+                }
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Meertalige content — vertalingen genereren (alleen bij bestaande module) */}
+      {moduleId && (
+        <div className="tw-mt-6">
+          <h2 className="tw-text-lg tw-font-bold tw-text-gray-900 tw-mb-1">
+            {t("learning.translations")}
+          </h2>
+          <p className="tw-text-xs tw-text-gray-500 tw-mb-3">
+            {t("learning.translationsHint")}
+          </p>
+          <div className="tw-bg-white tw-rounded-2xl tw-border tw-border-gray-200 tw-p-4 tw-flex tw-flex-wrap tw-gap-2 tw-items-center">
+            {ALL_LANGS.map((lang) => {
+              const done = translatedLangs.includes(lang);
+              return (
+                <div
+                  key={lang}
+                  className={`tw-flex tw-items-center tw-gap-1 tw-rounded-full tw-px-3 tw-py-1.5 tw-text-sm tw-border ${
+                    done
+                      ? "tw-bg-green-50 tw-border-green-300 tw-text-green-700"
+                      : "tw-bg-white tw-border-gray-300 tw-text-gray-600"
+                  }`}
+                >
+                  <span className="tw-uppercase tw-font-semibold">{lang}</span>
+                  {done ? (
+                    <button
+                      onClick={() => deleteTranslation(lang)}
+                      className="tw-text-green-600 hover:tw-text-red-500"
+                      title="✕"
+                    >
+                      ✕
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => generateTranslations([lang])}
+                      disabled={translating}
+                      className="tw-text-[#5971F6] hover:tw-underline tw-disabled:tw-opacity-50"
+                    >
+                      +
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            <button
+              onClick={() => generateTranslations(ALL_LANGS)}
+              disabled={translating}
+              className={`tw-ml-2 tw-bg-white tw-border tw-border-[#5971F6] tw-text-[#5971F6] tw-rounded-full tw-px-4 tw-py-1.5 tw-text-sm tw-font-semibold hover:tw-bg-indigo-50 ${translating ? "tw-opacity-50" : ""}`}
+            >
+              {translating ? t("learning.aiGenerating") : `✨ ${t("learning.translateAll")}`}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Functierollen: voor wie is deze module verplicht/aanbevolen? */}
+      {jobRoles.length > 0 && (
+        <div className="tw-mt-6">
+          <h2 className="tw-text-lg tw-font-bold tw-text-gray-900 tw-mb-3">
+            {t("learning.jobRoles")}
+          </h2>
+          <div className="tw-bg-white tw-rounded-2xl tw-border tw-border-gray-200 tw-divide-y tw-divide-gray-50">
+            {jobRoles.map((jr) => {
+              const coupled = jr.id in roleCouplings;
+              return (
+                <div
+                  key={jr.id}
+                  className="tw-flex tw-items-center tw-gap-3 tw-px-4 tw-py-2.5"
+                >
+                  <input
+                    type="checkbox"
+                    checked={coupled}
+                    onChange={(e) =>
+                      setRoleCouplings((m) => {
+                        const next = { ...m };
+                        if (e.target.checked) next[jr.id] = "required";
+                        else delete next[jr.id];
+                        return next;
+                      })
+                    }
+                    className="tw-h-4 tw-w-4"
+                  />
+                  <span className="tw-flex-1 tw-text-sm tw-text-gray-800">
+                    {jr.name}
+                  </span>
+                  {coupled && (
+                    <select
+                      className="tw-border tw-border-gray-300 tw-rounded-lg tw-px-2 tw-py-1 tw-text-xs tw-bg-white"
+                      value={roleCouplings[jr.id]}
+                      onChange={(e) =>
+                        setRoleCouplings((m) => ({
+                          ...m,
+                          [jr.id]: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="required">{t("learning.required")}</option>
+                      <option value="recommended">
+                        {t("learning.recommended")}
+                      </option>
+                    </select>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={save}
+        disabled={saving}
+        className={`tw-mt-6 tw-bg-[#5971F6] tw-text-white tw-rounded-full tw-px-8 tw-py-2.5 tw-font-semibold hover:tw-bg-blue-700 ${
+          saving ? "tw-opacity-50" : ""
+        }`}
+      >
+        {t("form.send")}
+      </button>
+    </div>
+  );
+}
+
+function ModuleFormPage() {
+  return (
+    <Suspense fallback={null}>
+      <ModuleFormInner />
+    </Suspense>
+  );
+}
+
+export default authMiddleware(ModuleFormPage, undefined, false, "learning_admin");

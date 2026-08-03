@@ -5,7 +5,6 @@ import { NextRequest } from "next/server";
 import { CompanyModel } from "../models/company";
 import { mailService } from "./mailService";
 import { v4 as uuidv4 } from "uuid";
-import { deleteUserFromLMSAsync } from "@/lib/services/lms-sync";
 
 export const CompanyService = {
   /**
@@ -347,6 +346,22 @@ export const CompanyService = {
       throw new Error(t("errorMessages.onlySuperAdminCanChangeMaxUsers"));
     }
 
+    // LMS-vlaggen (volledig LMS + Kennisbibliotheek-add-on): alleen superadmin
+    // mag deze wijzigen; voor anderen worden ze genegeerd (niet: geweigerd).
+    const isSuperAdminEditor =
+      loggedInUser?.role?.name === USER_ROLE.SUPER_ADMIN;
+    const lmsFlagUpdates =
+      isSuperAdminEditor
+        ? {
+            ...(typeof body.lms_enabled === "boolean" && {
+              lms_enabled: body.lms_enabled,
+            }),
+            ...(typeof body.has_knowledge_access === "boolean" && {
+              has_knowledge_access: body.has_knowledge_access,
+            }),
+          }
+        : {};
+
     const updatedCompany = await prisma.company.update({
       where: { id: companyId },
       data: {
@@ -356,6 +371,7 @@ export const CompanyService = {
         notes: body.notes,
         max_users: body.max_users,
         updated_at: new Date(),
+        ...lmsFlagUpdates,
       },
     });
 
@@ -451,11 +467,6 @@ export const CompanyService = {
           id: { in: userIds },
           company_id: companyId,
         },
-      });
-
-      // 3. Delete users from LMS (fire and forget)
-      usersToDelete.forEach((user) => {
-        deleteUserFromLMSAsync(user.id, user.email);
       });
     }
 

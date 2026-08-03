@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import type { ComponentType } from "react";
 import React from "react";
 
-function authMiddleware<P extends object>(Component: ComponentType<P>, requiredRole?: string, allowContactManager: boolean = false) {
+function authMiddleware<P extends object>(Component: ComponentType<P>, requiredRole?: string, allowContactManager: boolean = false, requiredLearningRole?: "learner" | "learning_admin") {
     return function AuthWrapper(props: P) {
         const router = useRouter();
         const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -43,6 +43,23 @@ function authMiddleware<P extends object>(Component: ComponentType<P>, requiredR
                     localStorage.setItem("dashboardRedirect", "true");
                     router.replace("/dashboard");
                     return;
+                }
+
+                // Leer-as (LMS-integratie): gate op learning_role, los van de
+                // sales-rol. Superadmin passeert altijd. De echte handhaving
+                // gebeurt server-side in learningAuthMiddleware; dit voorkomt
+                // alleen dat iemand op een leeg/verboden scherm belandt.
+                if (requiredLearningRole && user.role?.name !== "superadmin") {
+                    const learningRole = user?.learning_role || "none";
+                    const learningOk =
+                        requiredLearningRole === "learner"
+                            ? learningRole === "learner" || learningRole === "learning_admin"
+                            : learningRole === "learning_admin";
+                    if (!learningOk) {
+                        localStorage.setItem("dashboardRedirect", "true");
+                        router.replace("/dashboard");
+                        return;
+                    }
                 }
 
                 // Only set authenticated to true if all checks pass
