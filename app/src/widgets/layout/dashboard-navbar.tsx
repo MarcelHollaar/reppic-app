@@ -124,12 +124,17 @@ export function DashboardNavbar() {
               return (
                 <React.Fragment key={idx}>
                   <span className="tw-text-gray-300 tw-text-xs">/</span>
+                  {/* suppressHydrationWarning: de breadcrumb-vertaling (i18next)
+                      is server-side nog niet geladen, dus de server rendert de
+                      rauwe route-naam en de client de vertaalde tekst. React
+                      gebruikt na hydratie de (correcte) client-waarde; deze
+                      tekstmismatch is verwacht en hoeft niet te waarschuwen. */}
                   {isLast ? (
-                    <span className="tw-text-sm tw-font-medium tw-text-gray-700">{translated}</span>
+                    <span suppressHydrationWarning className="tw-text-sm tw-font-medium tw-text-gray-700">{translated}</span>
                   ) : crumb.href ? (
-                    <Link href={crumb.href} className="tw-text-sm tw-text-gray-400 hover:tw-text-gray-700 tw-transition-colors">{translated}</Link>
+                    <Link href={crumb.href} suppressHydrationWarning className="tw-text-sm tw-text-gray-400 hover:tw-text-gray-700 tw-transition-colors">{translated}</Link>
                   ) : (
-                    <span className="tw-text-sm tw-text-gray-400">{translated}</span>
+                    <span suppressHydrationWarning className="tw-text-sm tw-text-gray-400">{translated}</span>
                   )}
                 </React.Fragment>
               );
