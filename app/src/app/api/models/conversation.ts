@@ -301,6 +301,10 @@ export class ConversationModel {
         transcript_status: data?.transcript_status ?? undefined,
         transcription_provider: data?.transcription_provider ?? undefined,
         audio_retention_until: data?.audio_retention_until ?? null,
+        // Gespreksvoorbereiding: deelnemers + eindklant-koppeling (notetaker-flow)
+        attendee_emails: data?.attendee_emails ?? undefined,
+        calendar_event_id: data?.calendar_event_id ?? null,
+        prospect_account_id: data?.prospect_account_id ?? null,
       },
     });
   }

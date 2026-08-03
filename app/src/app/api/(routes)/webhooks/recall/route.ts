@@ -3,6 +3,7 @@ import { CustomerModel } from "@/app/api/models/customer";
 import { UserModel } from "@/app/api/models/user";
 import { AssemblyAIService } from "@/app/api/services/assemblyAIService";
 import { buildConversationKeyterms } from "@/app/api/services/terminologyService";
+import { ProspectAccountService } from "@/app/api/services/prospectAccountService";
 import { RecallAIService } from "@/app/api/services/recallAIService";
 import { NextRequest, NextResponse } from "next/server";
 import { Webhook } from "svix";
@@ -103,8 +104,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { organizer_email: organizerEmail, title } =
-    await RecallAIService.getCalendarMeetingDetails(meetingId, calendarUserId);
+  const meetingDetails = await RecallAIService.getCalendarMeetingDetails(
+    meetingId,
+    calendarUserId
+  );
+  const {
+    organizer_email: organizerEmail,
+    title,
+    attendee_emails: attendeeEmails,
+    attendees,
+  } = meetingDetails;
   const recording = botDetails.recordings?.[0];
 
   if (!recording) {
@@ -158,6 +167,31 @@ export async function POST(req: NextRequest) {
     customer = await CustomerModel.createCustomer(user.id, customerName);
   }
 
+  // Gespreksvoorbereiding: leg de deelnemers vast en koppel het gesprek aan
+  // een blijvende eindklant (ProspectAccount) op basis van de externe
+  // deelnemer-e-mails. Best-effort — mag de opname-flow nooit breken.
+  const allAttendeeEmails = (
+    attendeeEmails?.length
+      ? attendeeEmails
+      : (attendees ?? []).map((a) => a.email)
+  ).filter(Boolean);
+  let prospectAccountId: string | null = null;
+  try {
+    const resolved = await ProspectAccountService.resolveAndUpsertProspect(
+      user.company_id,
+      allAttendeeEmails,
+      organizerEmail
+    );
+    prospectAccountId = resolved?.prospectAccountId ?? null;
+    if (resolved) {
+      console.log(
+        `[RecallAI] Prospect resolved: ${resolved.domain} (${resolved.prospectAccountId})`
+      );
+    }
+  } catch (error) {
+    console.error("[RecallAI] Prospect resolution failed (non-fatal):", error);
+  }
+
   const conversation = await ConversationModel.createConversation({
     user_id: user.id,
     customer_id: customer.id,
@@ -165,6 +199,9 @@ export async function POST(req: NextRequest) {
     transcript_status: "processing",
     transcription_provider: "assemblyai",
     file_duration: meetingDurationInSeconds,
+    attendee_emails: allAttendeeEmails,
+    calendar_event_id: meetingId,
+    prospect_account_id: prospectAccountId,
   });
 
   console.log(`[RecallAI] Created conversation: ${conversation.id}`);

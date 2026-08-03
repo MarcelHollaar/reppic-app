@@ -165,6 +165,72 @@ model Customer {
   @@map("customers")
 }
 
+// Gespreksvoorbereiding: blijvende eindklant-entiteit per tenant.
+// domain = zakelijk e-maildomein van de klant, óf het volledige
+// freemail-adres (prospect-per-persoon) — zie src/lib/prospect/resolveProspect.ts.
+model ProspectAccount {
+  id                 String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  company_id         String   @map("company_id") @db.VarChar(40)
+  domain             String   @map("domain") @db.VarChar(255)
+  name               String?  @map("name") @db.VarChar(255)
+  hubspot_company_id String?  @map("hubspot_company_id") @db.VarChar(64)
+  created_at         DateTime @default(now()) @map("created_at")
+  updated_at         DateTime @updatedAt @map("updated_at")
+
+  company            Company            @relation(fields: [company_id], references: [id])
+  user_conversations UserConversation[]
+  conversation_preps ConversationPrep[]
+
+  @@unique([company_id, domain], name: "prospect_account_company_domain_unique")
+  @@map("prospect_accounts")
+}
+
+// Gespreksvoorbereiding: één rij per agenda-afspraak (calendar_event_id is
+// de dedupe-sleutel — ook skips worden vastgelegd zodat de uurlijkse cron
+// hetzelfde event niet blijft herevalueren).
+// status: pending → generated → sent | skipped | failed
+// skip_reason: no_sources | no_external_attendees | not_enough_context
+model ConversationPrep {
+  id                      String    @id @default(uuid()) @map("id") @db.VarChar(40)
+  company_id              String    @map("company_id") @db.VarChar(40)
+  user_id                 String    @map("user_id") @db.VarChar(40)
+  prospect_account_id     String?   @map("prospect_account_id") @db.VarChar(40)
+  calendar_event_id       String    @unique @map("calendar_event_id") @db.VarChar(255)
+  meeting_title           String?   @map("meeting_title") @db.VarChar(255)
+  meeting_start           DateTime  @map("meeting_start")
+  source_conversation_ids Json      @map("source_conversation_ids")
+  hubspot_deal_id         String?   @map("hubspot_deal_id") @db.VarChar(64)
+  content                 Json?     @map("content")
+  status                  String    @default("pending") @map("status") @db.VarChar(20)
+  skip_reason             String?   @map("skip_reason") @db.VarChar(100)
+  fail_count              Int       @default(0) @map("fail_count")
+  email_sent_at           DateTime? @map("email_sent_at")
+  created_at              DateTime  @default(now()) @map("created_at")
+  updated_at              DateTime  @updatedAt @map("updated_at")
+
+  prospect_account ProspectAccount? @relation(fields: [prospect_account_id], references: [id])
+
+  @@index([company_id], name: "idx_conversation_preps_company")
+  @@index([meeting_start], name: "idx_conversation_preps_meeting_start")
+  @@map("conversation_preps")
+}
+
+// Admin-bewerkbare prompt voor de gespreksvoorbereiding — zelfde
+// versioning-patroon als TranscriptAnalysisPromptVersion.
+model PrepAnalysisPromptVersion {
+  id         String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  version    Int      @map("version")
+  content    String   @map("content") @db.Text
+  is_active  Boolean  @default(false) @map("is_active")
+  note       String?  @map("note") @db.VarChar(500)
+  created_by String?  @map("created_by") @db.VarChar(40)
+  created_at DateTime @default(now()) @map("created_at")
+
+  @@unique([version], name: "prep_analysis_prompt_version_unique")
+  @@index([is_active], name: "idx_prep_analysis_prompt_active")
+  @@map("prep_analysis_prompt_versions")
+}
+
 model UserConversation {
   id                     String    @id @default(uuid()) @map("id") @db.VarChar(40)
   user_id                String    @map("user_id") @db.VarChar(40)
@@ -189,12 +255,18 @@ model UserConversation {
   audio_retention_until  DateTime? @map("audio_retention_until")
   audio_deleted_at       DateTime? @map("audio_deleted_at")
   is_merging_chunks      Boolean   @default(false) @map("is_merging_chunks")
+  // Gespreksvoorbereiding: deelnemers + koppeling aan de eindklant.
+  attendee_emails        Json?     @map("attendee_emails")
+  calendar_event_id      String?   @map("calendar_event_id") @db.VarChar(255)
+  prospect_account_id    String?   @map("prospect_account_id") @db.VarChar(40)
 
   customer                 Customer?              @relation(fields: [customer_id], references: [id])
   user                     User                   @relation(fields: [user_id], references: [id])
+  prospect_account         ProspectAccount?       @relation(fields: [prospect_account_id], references: [id])
   conversation_summaries   ConversationSummary[]
   conversation_summaries_x ConversationSummaryX[]
 
+  @@index([prospect_account_id], name: "idx_user_conversations_prospect")
   @@map("user_conversations")
 }
 
@@ -360,6 +432,8 @@ model Company {
   // LMS-integratie: volledig-LMS aan/uit per bedrijf + Kennisbibliotheek-add-on
   lms_enabled          Boolean @default(false) @map("lms_enabled")
   has_knowledge_access Boolean @default(false) @map("has_knowledge_access")
+  // Gespreksvoorbereiding: automatische prep-mails aan/uit (gefaseerde rollout)
+  meeting_prep_enabled Boolean @default(false) @map("meeting_prep_enabled")
 
   created_at DateTime @default(now()) @map("created_at")
   updated_at DateTime @updatedAt @map("updated_at")
@@ -373,6 +447,8 @@ model Company {
   learning_paths      LearningPath[]
   library_categories  LibraryCategory[]
   library_documents   LibraryDocument[]
+  // Gespreksvoorbereiding
+  prospect_accounts ProspectAccount[]
 
   @@unique([email, title], name: "email_title_unique")
   @@map("companies")
@@ -455,6 +531,25 @@ model TranscriptAnalysisPromptVersion {
   @@unique([version], name: "transcript_analysis_prompt_version_unique")
   @@index([is_active], name: "idx_transcript_analysis_prompt_active")
   @@map("transcript_analysis_prompt_versions")
+}
+
+// Gespreksvoorbereiding: HubSpot-koppeling per tenant (Company). Tokens
+// staan encrypted-at-rest via src/lib/crypto/secretBox.ts (ENCRYPTION_KEY).
+// status: active | broken (refresh geweigerd; opnieuw verbinden nodig).
+model HubspotConnection {
+  id                String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  company_id        String   @unique @map("company_id") @db.VarChar(40)
+  portal_id         String   @map("portal_id") @db.VarChar(32)
+  access_token_enc  String   @map("access_token_enc") @db.Text
+  refresh_token_enc String   @map("refresh_token_enc") @db.Text
+  expires_at        DateTime @map("expires_at")
+  scopes            String?  @map("scopes") @db.Text
+  status            String   @default("active") @map("status") @db.VarChar(20)
+  connected_by      String?  @map("connected_by") @db.VarChar(40)
+  created_at        DateTime @default(now()) @map("created_at")
+  updated_at        DateTime @updatedAt @map("updated_at")
+
+  @@map("hubspot_connections")
 }
 
 model DesktopSdkUpload {

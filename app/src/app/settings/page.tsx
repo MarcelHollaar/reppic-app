@@ -5,6 +5,8 @@ import DashboardModelComponent from "@/components/settings/DashboardModelCompone
 import TranscriptAnalysisPromptComponent from "@/components/settings/TranscriptAnalysisPromptComponent";
 import LmsChatModelComponent from "@/components/settings/LmsChatModelComponent";
 import LmsEmbeddingsModelComponent from "@/components/settings/LmsEmbeddingsModelComponent";
+import HubspotConnectionComponent from "@/components/settings/HubspotConnectionComponent";
+import PrepAnalysisPromptComponent from "@/components/settings/PrepAnalysisPromptComponent";
 import LanguageSettings from "@/components/settings/LanguageComponent";
 import NotificationSettings from "@/components/settings/NotificationComponent";
 import PasswordUpdateForm from "@/components/settings/PasswordResetComponent";
@@ -34,6 +36,15 @@ function SettingsPage() {
       label: t("dashboard.team"),
       value: "team",
       component: <TeamMembersListing />,
+    });
+  }
+
+  // HubSpot-koppeling: company-admin (manager) én superadmin.
+  if (userRole === USER_ROLE.MANAGER || userRole === USER_ROLE.SUPER_ADMIN) {
+    dynamicTabs.push({
+      label: t("settings.integrations"),
+      value: "integrations",
+      component: <HubspotConnectionComponent />,
     });
   }
 
@@ -80,6 +91,11 @@ function SettingsPage() {
       label: t("settings.lmsEmbeddingsModel"),
       value: "lms-embeddings-model",
       component: <LmsEmbeddingsModelComponent />,
+    });
+    dynamicTabs.push({
+      label: t("settings.prepAnalysisPrompt"),
+      value: "prep-analysis-prompt",
+      component: <PrepAnalysisPromptComponent />,
     });
     dynamicTabs.push({
       label: t("common.admins"),
