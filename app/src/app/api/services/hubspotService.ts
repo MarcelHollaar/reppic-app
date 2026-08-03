@@ -14,7 +14,6 @@ export const HUBSPOT_SCOPES = [
   "crm.objects.contacts.read",
   "crm.objects.companies.read",
   "crm.objects.deals.read",
-  "crm.objects.notes.read",
   "oauth",
 ];
 
