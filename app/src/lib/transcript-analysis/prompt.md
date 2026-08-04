@@ -416,7 +416,7 @@ Extract the **top 4** learning points for the seller from the conversation.
 - Choose from the 75 learning points listed below — do **not** invent new ones.
 - Select the 4 that are most relevant based on the conversation.
 - Learning points are improvement points (things the seller should do better).
-- The list below is in Dutch. If {{language}} is Dutch, quote each chosen learning point verbatim from the list (without the number). If {{language}} is another language, **translate each chosen learning point faithfully into {{language}}** — keep the meaning identical, do not add or remove anything.
+- **Language of the output learning points — read carefully.** The list of 75 below is written in Dutch, but that is only the source list. The learning points you put in the `Leerpunten` array MUST be written in {{language}}. If {{language}} is Dutch, quote each chosen point verbatim from the list (without the number). If {{language}} is anything other than Dutch, you MUST translate each chosen point into {{language}} — never copy the Dutch sentence verbatim into the output. Keep the meaning identical; do not add or remove anything. (Example: if {{language}} is German, a Dutch source point "Stel verdiepende vragen." must appear in `Leerpunten` as "Stellen Sie vertiefende Fragen.", not in Dutch.)
 - The learning points must relate to the conversation summary.
 
 ### The 75 learning points

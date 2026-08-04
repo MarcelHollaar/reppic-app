@@ -25,20 +25,25 @@ export const ConversationSummary = ({
           />
         </p>
 
-        {/* Learning Points Section */}
-        <h2 className="tw-text-base tw-font-semibold tw-text-gray-900 tw-mb-4">
-          {learningPoints ? t("conversationsListing.learningPoints") : ""}
-        </h2>
-        <ul className="tw-list-disc tw-pl-5">
-          {learningPoints.map((point, index) => (
-            <li
-              key={index}
-              className="tw-text-sm tw-text-gray-700 tw-mb-1"
-            >
-              {point}
-            </li>
-          ))}
-        </ul>
+        {/* Learning Points Section — alleen tonen als er punten zijn, zodat er
+            geen lege kop (of hardcoded placeholder) blijft staan. */}
+        {learningPoints && learningPoints.length > 0 && (
+          <>
+            <h2 className="tw-text-base tw-font-semibold tw-text-gray-900 tw-mb-4">
+              {t("conversationsListing.learningPoints")}
+            </h2>
+            <ul className="tw-list-disc tw-pl-5">
+              {learningPoints.map((point, index) => (
+                <li
+                  key={index}
+                  className="tw-text-sm tw-text-gray-700 tw-mb-1"
+                >
+                  {point}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </div>
     </div>
   );
