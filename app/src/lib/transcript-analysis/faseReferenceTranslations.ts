@@ -700,7 +700,7 @@ export const ES_FASE_REFERENCE = [
     "Doel": "El objetivo es crear un inicio positivo de la conversación y fomentar un ambiente relajado. Esto proporciona una buena base para la comunicación posterior.",
     "AnalysePunten": "1. ¿Saluda el vendedor al cliente de manera amable y con un tono positivo?\n2. ¿Utiliza el vendedor un toque personal, por ejemplo, una referencia a una interacción anterior o a un interés común?\n3. ¿Responde el cliente positivamente con un comentario amable y relajado?",
     "GoedVoorbeeld": "Inicio: El vendedor saluda al cliente amablemente: \"Buenas tardes, me alegra que haya sacado tiempo. ¿Cómo está hoy?\"\nEfecto: El cliente responde de forma amable y positiva y dice: \"Muy bien, gracias. ¿Y usted?\" Esto crea un ambiente relajado y positivo.",
-    "DeelsGoedVoorbeeld": "Inicio: El vendedor abre de forma neutral y dice: \"Buenas tardes, empecemos.\"\nEfecto: El cliente responde de manera breve y profesional, pero no muestra una emoción claramente positiva. El tono es profesional, pero carece de calidez.",
+    "DeelsGoedVoorbeeld": "Inicio: El vendedor abre de forma neutral y dice: \"Buenas tardes, empecemos.\"\nEfecto: El cliente responde de manera breve y práctica, pero no muestra una emoción claramente positiva. El tono es profesional, pero carece de calidez.",
     "FoutVoorbeeld": "Inicio: El vendedor dice con prisa: \"Vamos a ponernos manos a la obra de inmediato. Su tiempo es valioso.\"\nEfecto: El cliente se muestra algo sorprendido y responde escuetamente: \"Vale.\" Esto puede tener una influencia negativa en el ambiente.",
     "PuntenGoed": 3,
     "PuntenDeelsGoed": 1,

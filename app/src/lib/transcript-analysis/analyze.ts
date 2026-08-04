@@ -75,7 +75,7 @@ const NL_FASE_REFERENCE = [
     Titel: "Doel van het gesprek",
     Doel: "Het doel hierbij is om de verwachtingen van de klant te managen door duidelijk het doel van de afspraak te communiceren en te vragen of de klant hiermee instemt of misschien een ander of aanvullend doel heeft",
     AnalysePunten:
-      "1, Legt de verkoper het doel van de afspraak duidelijk uit aan de klant?\n2. Wordt er expliciet gevraagd of de klant akkoord gaat met het voorgestelde doel?\n3. Geeft de klant een duidelijke bevestiging of input over de verwachtingen van de afspraak?",
+      "1. Legt de verkoper het doel van de afspraak duidelijk uit aan de klant?\n2. Wordt er expliciet gevraagd of de klant akkoord gaat met het voorgestelde doel?\n3. Geeft de klant een duidelijke bevestiging of input over de verwachtingen van de afspraak?",
     GoedVoorbeeld:
       'Start: De verkoper zegt: "Mijn doel vandaag is om te bespreken hoe wij uw processen kunnen optimaliseren en samen tot concrete stappen te komen. Klinkt dat goed voor u?"\nEffect: De klant reageert bevestigend.',
     DeelsGoedVoorbeeld:
