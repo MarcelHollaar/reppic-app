@@ -363,6 +363,31 @@ function getFaseReferenceForLanguage(language: string) {
 // 1. Prompt builder
 // ---------------------------------------------------------------------------
 
+/**
+ * ISO-taalcode → volledige Engelse taalnaam voor in de LLM-prompt.
+ *
+ * Een kale code als instructie ("Respond in: **de**") is bewezen te zwak: bij
+ * een Duitse gebruiker kwam de feedback in het Nederlands terug (de prompt
+ * bevat veel Nederlandse voorbeeldlijsten, en "de" is bovendien een Nederlands
+ * lidwoord). Met de volledige naam ("German") volgt het model de instructie
+ * wél — empirisch geverifieerd tegen de echte gateway (A/B/C-test 2026-08-04).
+ * Zelfde conventie als LANG_NAMES in de dashboard-backend en LANG_NAME in
+ * learningTranslationService.
+ */
+const LLM_LANGUAGE_NAMES: Record<string, string> = {
+  nl: "Dutch",
+  en: "English",
+  de: "German",
+  fr: "French",
+  es: "Spanish",
+  it: "Italian",
+};
+
+function toLlmLanguageName(language: string): string {
+  const key = language.trim().slice(0, 2).toLowerCase();
+  return LLM_LANGUAGE_NAMES[key] ?? language;
+}
+
 async function buildPrompt(
   gesprek: string,
   language: string,
@@ -373,7 +398,7 @@ async function buildPrompt(
   // replaceAll; {{gesprek}} appears once.
   const template = await transcriptAnalysisPromptService.getActiveContent();
   let prompt = template
-    .replaceAll("{{language}}", language)
+    .replaceAll("{{language}}", toLlmLanguageName(language))
     .replace("{{gesprek}}", gesprek);
 
   // Optional per-company terminology glossary: inject it right before the
