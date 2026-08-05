@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { learningAuthMiddleware } from "../../../../middleware/authMiddleware";
-import { LEARNING_ROLE } from "@/configs/constants";
+import { learningAuthMiddleware, authMiddleware } from "../../../../middleware/authMiddleware";
+import { LEARNING_ROLE, USER_ROLE } from "@/configs/constants";
 import { learningHelpService } from "@/lib/services/learningHelpService";
 
 /** GET /api/learning/help/categories — alle helpcategorieën. */
@@ -12,10 +12,8 @@ export async function GET(req: NextRequest) {
 
 /** POST — categorie aanmaken (admin). */
 export async function POST(req: NextRequest) {
-  const authCheck = await learningAuthMiddleware(
-    req,
-    LEARNING_ROLE.LEARNING_ADMIN,
-  );
+  // Platform-brede content (geen company_id) → beheer alleen door superadmin.
+  const authCheck = await authMiddleware(req, USER_ROLE.SUPER_ADMIN);
   if (authCheck) return authCheck;
   const body = await req.json().catch(() => ({}));
   if (!body.name?.trim()) {

@@ -15,6 +15,7 @@ import "./globals.css";
 import ScrollToTopButton from "@/utils/scrollToTop";
 import {ChatButton} from "@/components/HegyGenButton";
 import DesktopRecordingBridge from "@/components/DesktopRecordingBridge";
+import LanguageSync from "@/components/LanguageSync";
 
 const roboto = Roboto({
   subsets: ["latin"],
@@ -72,6 +73,7 @@ function RootLayout({ children }: { children: React.ReactNode }): React.JSX.Elem
             </InnerContent>
             <ScrollToTopButton />
             <DesktopRecordingBridge />
+            <LanguageSync />
           </MaterialTailwindControllerProvider>
         </ThemeProvider>
         </I18nextProvider>

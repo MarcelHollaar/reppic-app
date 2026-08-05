@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { learningAuthMiddleware } from "../../../../../middleware/authMiddleware";
-import { LEARNING_ROLE } from "@/configs/constants";
+import { learningAuthMiddleware, authMiddleware } from "../../../../../middleware/authMiddleware";
+import { LEARNING_ROLE, USER_ROLE } from "@/configs/constants";
 import { learningHelpService } from "@/lib/services/learningHelpService";
 
 type Params = { params: Promise<{ articleId: string }> };
@@ -19,10 +19,8 @@ export async function GET(req: NextRequest, { params }: Params) {
 
 /** PUT — artikel bijwerken (admin). */
 export async function PUT(req: NextRequest, { params }: Params) {
-  const authCheck = await learningAuthMiddleware(
-    req,
-    LEARNING_ROLE.LEARNING_ADMIN,
-  );
+  // Platform-brede content (geen company_id) → beheer alleen door superadmin.
+  const authCheck = await authMiddleware(req, USER_ROLE.SUPER_ADMIN);
   if (authCheck) return authCheck;
   const { articleId } = await params;
   const body = await req.json().catch(() => ({}));
@@ -35,10 +33,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
 /** DELETE — artikel verwijderen (admin). */
 export async function DELETE(req: NextRequest, { params }: Params) {
-  const authCheck = await learningAuthMiddleware(
-    req,
-    LEARNING_ROLE.LEARNING_ADMIN,
-  );
+  // Platform-brede content (geen company_id) → beheer alleen door superadmin.
+  const authCheck = await authMiddleware(req, USER_ROLE.SUPER_ADMIN);
   if (authCheck) return authCheck;
   const { articleId } = await params;
   await learningHelpService.deleteArticle(articleId);

@@ -9,7 +9,7 @@ import {
   PlayIcon,
 } from "@heroicons/react/24/outline";
 import { getAuthHeaders } from "@/utils/getAuthHeaders";
-import { sanitizeEmbedHtml } from "@/utils/safeHtml";
+import { extractSafeEmbedUrl } from "@/utils/safeHtml";
 import { useUserRole } from "@/hooks/useUserRole";
 import { USER_ROLE } from "@/configs/constants";
 import { useBreadcrumb } from "@/context/BreadcrumbContext";
@@ -64,26 +64,25 @@ const PlaybackPage: React.FC<{}> = () => {
     }
   }, [userRole, videoData]);
 
-  // Memoize the embedded video HTML so it doesn't rerender unless videoData.embedded_code changes
+  // Geen ruwe HTML-injectie meer: we halen alleen een vertrouwde iframe-URL
+  // (Synthesia/HeyGen/…) uit de embed-code en renderen zelf een schone iframe.
+  // Sluit de stored-XSS-route via embedded_code af (zelfde aanpak als de
+  // LMS-modulespeler).
   const memoizedEmbeddedVideo = useMemo(() => {
-    if (!videoData?.embedded_code) return null;
+    const url = extractSafeEmbedUrl(videoData?.embedded_code);
+    if (!url) return null;
     return (
-      <div
-        dangerouslySetInnerHTML={{
-          __html: sanitizeEmbedHtml(
-            videoData.embedded_code.replace(
-              '<div style="position: relative; overflow: hidden; aspect-ratio: 1920/1080"',
-              "<div"
-            ).replace(
-              /<iframe[^>]*width="[^"]*"[^>]*height="[^"]*"/,
-              '<iframe width="100%" height="100%"'
-            )
-          ),
-        }}
-        className="tw-w-full tw-h-full tw-aspect-video"
-      />
+      <div className="tw-w-full tw-h-full tw-aspect-video">
+        <iframe
+          src={url}
+          className="tw-w-full tw-h-full"
+          allow="encrypted-media; fullscreen; picture-in-picture"
+          allowFullScreen
+          title={videoData?.title || "video"}
+        />
+      </div>
     );
-  }, [videoData?.embedded_code, videoId]);
+  }, [videoData?.embedded_code, videoData?.title, videoId]);
 
   const fetchVideoById = async (id: string) => {
     try {

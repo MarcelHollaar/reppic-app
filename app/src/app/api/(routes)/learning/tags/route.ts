@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { learningAuthMiddleware } from "../../../middleware/authMiddleware";
-import { LEARNING_ROLE } from "@/configs/constants";
+import { learningAuthMiddleware, authMiddleware } from "../../../middleware/authMiddleware";
+import { LEARNING_ROLE, USER_ROLE } from "@/configs/constants";
 import { prisma } from "@/app/api/utils/prisma";
 
-/** GET /api/learning/tags — alle leertags (beheer; port van productie /api/tags). */
+/** GET /api/learning/tags — alle leertags (port van productie /api/tags).
+ * Lezen mag door learning_admins (nodig in het moduleformulier); alleen
+ * SCHRIJVEN is superadmin-only omdat tags platform-breed zijn. */
 export async function GET(req: NextRequest) {
   const authCheck = await learningAuthMiddleware(
     req,
@@ -18,10 +20,8 @@ export async function GET(req: NextRequest) {
 
 /** POST — tag aanmaken. Body: { name, category?, description? }. */
 export async function POST(req: NextRequest) {
-  const authCheck = await learningAuthMiddleware(
-    req,
-    LEARNING_ROLE.LEARNING_ADMIN,
-  );
+  // Platform-brede content (geen company_id) → beheer alleen door superadmin.
+  const authCheck = await authMiddleware(req, USER_ROLE.SUPER_ADMIN);
   if (authCheck) return authCheck;
   const user = (req as any).user;
   const body = await req.json().catch(() => ({}));
