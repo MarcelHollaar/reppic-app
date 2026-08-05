@@ -48,6 +48,7 @@ function LearningAdminPage() {
   const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set());
   const [assignRequired, setAssignRequired] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
   // Leerpad toewijzen (uitbreiding B)
   const [paths, setPaths] = useState<PathItem[]>([]);
   const [assignPathFor, setAssignPathFor] = useState<Employee | null>(null);
@@ -116,6 +117,43 @@ function LearningAdminPage() {
       loadEmployees();
     } else {
       toast.error("Error");
+    }
+  };
+
+  // Bulk-gebruikersupload via CSV (LMS 1:1 P6, port van productie
+  // BulkUserUploadDialog): iedere rij gaat door de normale uitnodigingsflow.
+  const bulkUpload = async (file: File | null) => {
+    if (!file) return;
+    const headers = getAuthHeaders({}, true);
+    if (!headers) return;
+    setBulkBusy(true);
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+      const res = await fetch("/api/learning/admin/users/bulk", {
+        method: "POST",
+        headers,
+        body: fd,
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.message);
+      const ok = json.data.successful.length;
+      const fail = json.data.failed.length;
+      if (fail === 0) {
+        toast.success(`✓ ${ok}`);
+      } else {
+        toast.warn(
+          `✓ ${ok} · ✗ ${fail}: ${json.data.failed
+            .slice(0, 3)
+            .map((f: any) => `${f.email || `rij ${f.row}`}`)
+            .join(", ")}${fail > 3 ? "…" : ""}`,
+        );
+      }
+      loadEmployees();
+    } catch {
+      toast.error(t("learning.bulkUploadFailed"));
+    } finally {
+      setBulkBusy(false);
     }
   };
 
@@ -194,6 +232,19 @@ function LearningAdminPage() {
         </div>
         {/* Snelkoppelingen naar de beheeronderdelen (uitbreiding B) */}
         <div className="tw-flex tw-gap-2 tw-flex-wrap">
+          <label
+            className={`tw-flex tw-items-center tw-gap-1 tw-text-sm tw-font-semibold tw-text-[#5971F6] tw-bg-indigo-50 hover:tw-bg-indigo-100 tw-rounded-full tw-px-4 tw-py-2 tw-cursor-pointer ${bulkBusy ? "tw-opacity-50" : ""}`}
+            title={t("learning.bulkUploadHint")}
+          >
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="tw-hidden"
+              disabled={bulkBusy}
+              onChange={(e) => bulkUpload(e.target.files?.[0] || null)}
+            />
+            {bulkBusy ? "⏳" : `⬆ ${t("learning.bulkUpload")}`}
+          </label>
           {[
             { href: "/learning/manage", label: t("learning.manageModules") },
             { href: "/learning/manage/paths", label: t("learning.paths") },

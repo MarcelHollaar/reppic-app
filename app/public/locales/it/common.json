@@ -1336,7 +1336,19 @@
     "mediaUpload": "Carica media",
     "mediaEmpty": "Ancora nessun media.",
     "mediaConversionFailed": "Conversione Office in PDF non riuscita. LibreOffice è installato sul server?",
-    "mediaUrlCopied": "URL copiato"
+    "mediaUrlCopied": "URL copiato",
+    "medals": "Medaglie",
+    "medal_bronze": "Bronzo",
+    "medal_silver": "Argento",
+    "medal_gold": "Oro",
+    "tags": "Tag",
+    "tagsNote": "I tag di competenza collegano i moduli ai profili professionali e alimentano il matching IA dei percorsi.",
+    "tagName": "Nome del tag",
+    "addTag": "Aggiungi tag",
+    "tagDuplicate": "Questo tag esiste già.",
+    "bulkUpload": "Caricamento di massa (CSV)",
+    "bulkUploadHint": "CSV con colonne: nome, email, telefono (opzionale), ruolo di apprendimento (opzionale). Ogni riga riceve un'email di invito.",
+    "bulkUploadFailed": "Caricamento di massa non riuscito."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modello per la generazione di percorsi con IA",

@@ -1347,7 +1347,19 @@
     "mediaUpload": "Téléverser un média",
     "mediaEmpty": "Pas encore de médias.",
     "mediaConversionFailed": "La conversion Office vers PDF a échoué. LibreOffice est-il installé sur le serveur ?",
-    "mediaUrlCopied": "URL copiée"
+    "mediaUrlCopied": "URL copiée",
+    "medals": "Médailles",
+    "medal_bronze": "Bronze",
+    "medal_silver": "Argent",
+    "medal_gold": "Or",
+    "tags": "Tags",
+    "tagsNote": "Les tags de compétence relient les modules aux profils de poste et alimentent le matching IA des parcours.",
+    "tagName": "Nom du tag",
+    "addTag": "Ajouter un tag",
+    "tagDuplicate": "Ce tag existe déjà.",
+    "bulkUpload": "Import en masse (CSV)",
+    "bulkUploadHint": "CSV avec colonnes : nom, e-mail, téléphone (optionnel), rôle d'apprentissage (optionnel). Chaque ligne reçoit un e-mail d'invitation.",
+    "bulkUploadFailed": "Échec de l'import en masse."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modèle pour la génération de parcours par IA",

@@ -75,6 +75,25 @@ function ProgressPage() {
     },
   ];
 
+  // Medaillesysteem (LMS 1:1 P6, port van productie Progress.tsx): alleen
+  // afgeronde modules met score ≥ 80 tellen; elke volledige ronde door alle
+  // modules is een tier (brons → zilver → goud → herhaalt).
+  const medalCompleted = summary.progress.filter(
+    (p) => p.status === "completed" && (p.score == null || p.score >= 80),
+  ).length;
+  const medalTotal = summary.progress.length;
+  const tierNames = ["bronze", "silver", "gold"] as const;
+  const currentTier =
+    tierNames[
+      (medalTotal > 0 ? Math.floor(medalCompleted / medalTotal) : 0) % 3
+    ];
+  const currentTierProgress = medalTotal > 0 ? medalCompleted % medalTotal : 0;
+  const medalStyles: Record<string, { chip: string; icon: string }> = {
+    bronze: { chip: "tw-bg-amber-100", icon: "tw-text-amber-600" },
+    silver: { chip: "tw-bg-slate-200", icon: "tw-text-slate-500" },
+    gold: { chip: "tw-bg-yellow-100", icon: "tw-text-yellow-500" },
+  };
+
   return (
     <div className="tw-p-6 tw-max-w-5xl tw-mx-auto">
       <button
@@ -101,6 +120,42 @@ function ProgressPage() {
           </div>
         ))}
       </div>
+
+      {/* Medailles (brons/zilver/goud) */}
+      {medalTotal > 0 && (
+        <div className="tw-bg-white tw-rounded-2xl tw-border tw-border-gray-200 tw-p-5 tw-mb-8">
+          <div className="tw-flex tw-items-center tw-justify-between tw-mb-4">
+            <h2 className="tw-text-lg tw-font-bold tw-text-gray-900">
+              🏅 {t("learning.medals")}
+            </h2>
+            <span
+              className={`tw-text-xs tw-font-semibold tw-rounded-full tw-px-3 tw-py-1 ${medalStyles[currentTier].chip} ${medalStyles[currentTier].icon}`}
+            >
+              {t(`learning.medal_${currentTier}`)} · {currentTierProgress}/
+              {medalTotal}
+            </span>
+          </div>
+          <div className="tw-grid tw-grid-cols-6 sm:tw-grid-cols-8 md:tw-grid-cols-10 tw-gap-2">
+            {Array.from({ length: medalTotal }).map((_, index) => (
+              <div
+                key={index}
+                className={`tw-flex tw-flex-col tw-items-center tw-justify-center tw-gap-0.5 tw-p-2 tw-rounded-lg ${medalStyles[currentTier].chip} ${
+                  index < currentTierProgress ? "" : "tw-opacity-20"
+                }`}
+              >
+                <span className={`tw-text-lg ${medalStyles[currentTier].icon}`}>
+                  🏅
+                </span>
+                <span
+                  className={`tw-text-[10px] ${medalStyles[currentTier].icon}`}
+                >
+                  {index + 1}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Certificaten */}
       {summary.certificates.length > 0 && (

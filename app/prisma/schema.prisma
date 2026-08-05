@@ -889,3 +889,32 @@ model LearningMediaItem {
   @@index([company_id], name: "idx_media_items_company")
   @@map("media_items")
 }
+
+// LMS 1:1 P6 — losse competentietags voor leermodules (port van productie
+// Tag; tabel heet learning_tags omdat "tags" al door video-tags bezet is).
+model LearningTag {
+  id          String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  name        String   @unique @map("name") @db.Text
+  category    String?  @map("category") @db.Text
+  description String?  @map("description") @db.Text
+  created_by  String?  @map("created_by") @db.VarChar(40)
+  usage_count Int      @default(0) @map("usage_count")
+  created_at  DateTime @default(now()) @map("created_at")
+
+  @@map("learning_tags")
+}
+
+// LMS 1:1 P6 — onboarding-tourvoortgang (port van productie UserTourProgress;
+// in productie alleen API, geen UI — hier idem).
+model UserTourProgress {
+  id           String    @id @default(uuid()) @map("id") @db.VarChar(40)
+  user_id      String    @map("user_id") @db.VarChar(40)
+  tour_id      String    @map("tour_id") @db.Text
+  completed    Boolean   @default(false) @map("completed")
+  current_step Int       @default(0) @map("current_step")
+  completed_at DateTime? @map("completed_at")
+  updated_at   DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([user_id, tour_id], name: "user_tour_unique")
+  @@map("user_tour_progress")
+}

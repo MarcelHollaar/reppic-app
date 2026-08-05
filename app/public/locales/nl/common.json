@@ -1382,7 +1382,19 @@
     "mediaUpload": "Media uploaden",
     "mediaEmpty": "Nog geen media.",
     "mediaConversionFailed": "Office-naar-PDF-conversie mislukt. Is LibreOffice op de server geïnstalleerd?",
-    "mediaUrlCopied": "URL gekopieerd"
+    "mediaUrlCopied": "URL gekopieerd",
+    "medals": "Medailles",
+    "medal_bronze": "Brons",
+    "medal_silver": "Zilver",
+    "medal_gold": "Goud",
+    "tags": "Tags",
+    "tagsNote": "Competentietags koppelen modules aan functieprofielen en sturen de AI-leerpadmatching.",
+    "tagName": "Tagnaam",
+    "addTag": "Tag toevoegen",
+    "tagDuplicate": "Deze tag bestaat al.",
+    "bulkUpload": "Bulk-upload (CSV)",
+    "bulkUploadHint": "CSV met kolommen: naam, email, telefoon (optioneel), leerrol (optioneel). Iedere rij krijgt een uitnodigingsmail.",
+    "bulkUploadFailed": "Bulk-upload mislukt."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Model voor AI-leerpadgeneratie",

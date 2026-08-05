@@ -1346,7 +1346,19 @@
     "mediaUpload": "Medien hochladen",
     "mediaEmpty": "Noch keine Medien.",
     "mediaConversionFailed": "Office-zu-PDF-Konvertierung fehlgeschlagen. Ist LibreOffice auf dem Server installiert?",
-    "mediaUrlCopied": "URL kopiert"
+    "mediaUrlCopied": "URL kopiert",
+    "medals": "Medaillen",
+    "medal_bronze": "Bronze",
+    "medal_silver": "Silber",
+    "medal_gold": "Gold",
+    "tags": "Tags",
+    "tagsNote": "Kompetenz-Tags verknüpfen Module mit Funktionsprofilen und steuern das KI-Lernpfad-Matching.",
+    "tagName": "Tag-Name",
+    "addTag": "Tag hinzufügen",
+    "tagDuplicate": "Dieses Tag existiert bereits.",
+    "bulkUpload": "Massenupload (CSV)",
+    "bulkUploadHint": "CSV mit Spalten: Name, E-Mail, Telefon (optional), Lernrolle (optional). Jede Zeile erhält eine Einladungs-E-Mail.",
+    "bulkUploadFailed": "Massenupload fehlgeschlagen."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modell für die KI-Lernpfaderstellung",

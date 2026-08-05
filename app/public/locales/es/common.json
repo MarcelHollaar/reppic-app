@@ -1336,7 +1336,19 @@
     "mediaUpload": "Subir medios",
     "mediaEmpty": "Aún no hay medios.",
     "mediaConversionFailed": "La conversión de Office a PDF falló. ¿Está LibreOffice instalado en el servidor?",
-    "mediaUrlCopied": "URL copiada"
+    "mediaUrlCopied": "URL copiada",
+    "medals": "Medallas",
+    "medal_bronze": "Bronce",
+    "medal_silver": "Plata",
+    "medal_gold": "Oro",
+    "tags": "Etiquetas",
+    "tagsNote": "Las etiquetas de competencia vinculan módulos con perfiles de puesto y alimentan el matching de rutas con IA.",
+    "tagName": "Nombre de la etiqueta",
+    "addTag": "Añadir etiqueta",
+    "tagDuplicate": "Esta etiqueta ya existe.",
+    "bulkUpload": "Carga masiva (CSV)",
+    "bulkUploadHint": "CSV con columnas: nombre, email, teléfono (opcional), rol de aprendizaje (opcional). Cada fila recibe un correo de invitación.",
+    "bulkUploadFailed": "Error en la carga masiva."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modelo para la generación de rutas con IA",

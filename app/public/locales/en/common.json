@@ -1383,7 +1383,19 @@
     "mediaUpload": "Upload media",
     "mediaEmpty": "No media yet.",
     "mediaConversionFailed": "Office to PDF conversion failed. Is LibreOffice installed on the server?",
-    "mediaUrlCopied": "URL copied"
+    "mediaUrlCopied": "URL copied",
+    "medals": "Medals",
+    "medal_bronze": "Bronze",
+    "medal_silver": "Silver",
+    "medal_gold": "Gold",
+    "tags": "Tags",
+    "tagsNote": "Competency tags link modules to job profiles and power the AI learning path matching.",
+    "tagName": "Tag name",
+    "addTag": "Add tag",
+    "tagDuplicate": "This tag already exists.",
+    "bulkUpload": "Bulk upload (CSV)",
+    "bulkUploadHint": "CSV with columns: name, email, phone (optional), learning_role (optional). Each row receives an invitation email.",
+    "bulkUploadFailed": "Bulk upload failed."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Model for AI learning-path generation",
