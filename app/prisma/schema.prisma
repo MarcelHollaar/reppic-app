@@ -796,3 +796,41 @@ model LearningModuleTranslation {
   @@unique([module_id, language], name: "learning_module_translation_unique")
   @@map("learning_module_translations")
 }
+
+// LMS 1:1 P3 — Help-center (port van productie HelpCategory/HelpArticle).
+// Artikelen per rol (all/learner/admin), taal en optionele paginacontext;
+// beheer door learning_admin/superadmin.
+model HelpCategory {
+  id          String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  name        String   @map("name") @db.Text
+  description String?  @map("description") @db.Text
+  icon        String?  @map("icon") @db.Text
+  sort_order  Int      @default(0) @map("sort_order")
+  created_at  DateTime @default(now()) @map("created_at")
+
+  articles HelpArticle[]
+
+  @@map("help_categories")
+}
+
+model HelpArticle {
+  id           String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  category_id  String?  @map("category_id") @db.VarChar(40)
+  title        String   @map("title") @db.Text
+  content      String   @map("content") @db.Text
+  excerpt      String?  @map("excerpt") @db.Text
+  page_context String?  @map("page_context") @db.Text
+  target_role  String   @default("all") @map("target_role") @db.Text
+  language     String   @default("en") @map("language") @db.Text
+  is_published Boolean  @default(true) @map("is_published")
+  sort_order   Int      @default(0) @map("sort_order")
+  view_count   Int      @default(0) @map("view_count")
+  created_by   String?  @map("created_by") @db.VarChar(40)
+  created_at   DateTime @default(now()) @map("created_at")
+  updated_at   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  category HelpCategory? @relation(fields: [category_id], references: [id], onDelete: SetNull)
+
+  @@index([page_context], name: "idx_help_articles_page_context")
+  @@map("help_articles")
+}
