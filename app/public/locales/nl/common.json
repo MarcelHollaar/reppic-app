@@ -1372,7 +1372,11 @@
     "name": "Naam",
     "save": "Opslaan",
     "cancel": "Annuleren",
-    "manage": "Beheer"
+    "manage": "Beheer",
+    "aiAnalyzeProfile": "Profiel analyseren",
+    "aiMatchModules": "Passende modules zoeken",
+    "aiCreatePath": "Leerpad aanmaken",
+    "aiNoMatches": "Geen passende modules gevonden. Voeg competentietags toe aan modules of genereer eerst embeddings."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Model voor AI-leerpadgeneratie",

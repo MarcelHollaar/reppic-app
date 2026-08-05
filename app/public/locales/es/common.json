@@ -1326,7 +1326,11 @@
     "name": "Nombre",
     "save": "Guardar",
     "cancel": "Cancelar",
-    "manage": "Gestión"
+    "manage": "Gestión",
+    "aiAnalyzeProfile": "Analizar perfil",
+    "aiMatchModules": "Buscar módulos coincidentes",
+    "aiCreatePath": "Crear ruta de aprendizaje",
+    "aiNoMatches": "No se encontraron módulos coincidentes. Añade etiquetas de competencia a los módulos o genera primero los embeddings."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modelo para la generación de rutas con IA",

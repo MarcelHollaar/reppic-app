@@ -1326,7 +1326,11 @@
     "name": "Nome",
     "save": "Salva",
     "cancel": "Annulla",
-    "manage": "Gestione"
+    "manage": "Gestione",
+    "aiAnalyzeProfile": "Analizza profilo",
+    "aiMatchModules": "Trova moduli corrispondenti",
+    "aiCreatePath": "Crea percorso",
+    "aiNoMatches": "Nessun modulo corrispondente trovato. Aggiungi tag di competenza ai moduli o genera prima gli embedding."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modello per la generazione di percorsi con IA",

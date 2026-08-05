@@ -1373,7 +1373,11 @@
     "name": "Name",
     "save": "Save",
     "cancel": "Cancel",
-    "manage": "Management"
+    "manage": "Management",
+    "aiAnalyzeProfile": "Analyze profile",
+    "aiMatchModules": "Find matching modules",
+    "aiCreatePath": "Create learning path",
+    "aiNoMatches": "No matching modules found. Add competency tags to modules or generate embeddings first."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Model for AI learning-path generation",

@@ -1336,7 +1336,11 @@
     "name": "Name",
     "save": "Speichern",
     "cancel": "Abbrechen",
-    "manage": "Verwaltung"
+    "manage": "Verwaltung",
+    "aiAnalyzeProfile": "Profil analysieren",
+    "aiMatchModules": "Passende Module finden",
+    "aiCreatePath": "Lernpfad erstellen",
+    "aiNoMatches": "Keine passenden Module gefunden. Fügen Sie Modulen Kompetenz-Tags hinzu oder erzeugen Sie zuerst Embeddings."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modell für die KI-Lernpfaderstellung",

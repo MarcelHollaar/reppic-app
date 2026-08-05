@@ -43,11 +43,35 @@ function ManagePathsPage() {
   const [editing, setEditing] = useState<Partial<PathItem> | null>(null);
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-  // AI-leerpadgeneratie (AI-uitbreiding)
+  // AI-leerpadgeneratie via embedding-flow (LMS 1:1 P4)
   const [aiOpen, setAiOpen] = useState(false);
   const [aiProfile, setAiProfile] = useState("");
+  const [aiFile, setAiFile] = useState<File | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiRationale, setAiRationale] = useState<string | null>(null);
+  const [aiStep, setAiStep] = useState<"input" | "competencies" | "matches">(
+    "input",
+  );
+  const [aiAnalysis, setAiAnalysis] = useState<{
+    fullText: string;
+    jobTitle: string;
+    summary: string;
+    competencies: {
+      name: string;
+      category: string;
+      importance: string;
+    }[];
+  } | null>(null);
+  const [aiMatches, setAiMatches] = useState<
+    {
+      moduleId: string;
+      moduleName: string;
+      matchScore: number;
+      semanticScore: number;
+      matchingTags: string[];
+    }[]
+  >([]);
+  const [aiSelected, setAiSelected] = useState<string[]>([]);
 
   const load = () => {
     const headers = getAuthHeaders();
@@ -124,25 +148,104 @@ function ManagePathsPage() {
     setDeleteTarget(null);
   };
 
-  const generateWithAi = async () => {
-    if (aiProfile.trim().length < 40) {
+  // Embedding-leerpadflow (1-op-1 met productie): 3 stappen met menselijke
+  // tussenstappen — analyse → competenties beoordelen → gematchte modules
+  // kiezen → leerpad aanmaken.
+  const analyzeProfile = async () => {
+    if (aiProfile.trim().length < 40 && !aiFile) {
       toast.error(t("learning.aiProfileTooShort"));
       return;
     }
-    const headers = getAuthHeaders();
-    if (!headers) return;
     setAiBusy(true);
     setAiRationale(null);
     try {
-      const res = await fetch("/api/learning/paths/generate", {
+      let res: Response;
+      if (aiFile) {
+        const headers = getAuthHeaders({}, true);
+        if (!headers) return;
+        const fd = new FormData();
+        fd.set("document", aiFile);
+        res = await fetch("/api/learning/paths/analyze", {
+          method: "POST",
+          headers,
+          body: fd,
+        });
+      } else {
+        const headers = getAuthHeaders();
+        if (!headers) return;
+        res = await fetch("/api/learning/paths/analyze", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ job_profile_text: aiProfile }),
+        });
+      }
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message);
+      setAiAnalysis(json.data);
+      setAiStep("competencies");
+    } catch {
+      toast.error(t("learning.aiGenerateFailed"));
+    }
+    setAiBusy(false);
+  };
+
+  const matchModules = async () => {
+    if (!aiAnalysis) return;
+    const headers = getAuthHeaders();
+    if (!headers) return;
+    setAiBusy(true);
+    try {
+      const res = await fetch("/api/learning/paths/match", {
         method: "POST",
         headers,
-        body: JSON.stringify({ job_profile_text: aiProfile }),
+        body: JSON.stringify({
+          competencies: aiAnalysis.competencies,
+          jobProfileText: aiAnalysis.fullText,
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.message);
-      setAiRationale(json.data.rationale || "✓");
-      toast.success(`✓ ${json.data.path.job_function}`);
+      setAiMatches(json.data.matches);
+      // Hoge + gemiddelde prioriteit vooraf aangevinkt (productiegedrag).
+      setAiSelected(
+        json.data.matches
+          .filter((m: any) => m.matchScore >= 40)
+          .map((m: any) => m.moduleId),
+      );
+      setAiStep("matches");
+    } catch {
+      toast.error(t("learning.aiGenerateFailed"));
+    }
+    setAiBusy(false);
+  };
+
+  const createFromAnalysis = async () => {
+    if (!aiAnalysis || aiSelected.length === 0) return;
+    const headers = getAuthHeaders();
+    if (!headers) return;
+    setAiBusy(true);
+    try {
+      const res = await fetch("/api/learning/paths/create-from-analysis", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          job_function: aiAnalysis.jobTitle || t("learning.aiGeneratePath"),
+          level: "medior",
+          description: aiAnalysis.summary || null,
+          selectedModuleIds: aiSelected,
+          competencies: aiAnalysis.competencies,
+          jobProfileText: aiAnalysis.fullText,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message);
+      toast.success(`✓ ${aiAnalysis.jobTitle}`);
+      setAiStep("input");
+      setAiAnalysis(null);
+      setAiMatches([]);
+      setAiSelected([]);
+      setAiProfile("");
+      setAiFile(null);
       load();
     } catch {
       toast.error(t("learning.aiGenerateFailed"));
@@ -212,26 +315,161 @@ function ManagePathsPage() {
               ✕
             </button>
           </div>
-          <textarea
-            className={`${inputCls} tw-h-28`}
-            placeholder={t("learning.aiProfilePlaceholder")}
-            value={aiProfile}
-            onChange={(e) => setAiProfile(e.target.value)}
-          />
-          <div className="tw-flex tw-items-center tw-gap-3 tw-mt-3">
-            <button
-              onClick={generateWithAi}
-              disabled={aiBusy}
-              className={`tw-bg-[#5971F6] tw-text-white tw-rounded-full tw-px-5 tw-py-2 tw-text-sm tw-font-semibold hover:tw-bg-blue-700 ${aiBusy ? "tw-opacity-50" : ""}`}
-            >
-              {aiBusy ? "…" : t("learning.aiGeneratePath")}
-            </button>
-            {aiBusy && (
-              <span className="tw-text-xs tw-text-gray-500">
-                {t("learning.aiGenerating")}
-              </span>
-            )}
-          </div>
+          {/* Stap 1 — invoer (tekst óf pdf/doc/docx) */}
+          {aiStep === "input" && (
+            <>
+              <textarea
+                className={`${inputCls} tw-h-28`}
+                placeholder={t("learning.aiProfilePlaceholder")}
+                value={aiProfile}
+                onChange={(e) => setAiProfile(e.target.value)}
+              />
+              <div className="tw-flex tw-flex-wrap tw-items-center tw-gap-3 tw-mt-3">
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  className="tw-text-xs"
+                  onChange={(e) => setAiFile(e.target.files?.[0] || null)}
+                />
+                <button
+                  onClick={analyzeProfile}
+                  disabled={aiBusy}
+                  className={`tw-bg-[#5971F6] tw-text-white tw-rounded-full tw-px-5 tw-py-2 tw-text-sm tw-font-semibold hover:tw-bg-blue-700 ${aiBusy ? "tw-opacity-50" : ""}`}
+                >
+                  {aiBusy ? "…" : t("learning.aiAnalyzeProfile")}
+                </button>
+                {aiBusy && (
+                  <span className="tw-text-xs tw-text-gray-500">
+                    {t("learning.aiGenerating")}
+                  </span>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Stap 2 — competenties beoordelen */}
+          {aiStep === "competencies" && aiAnalysis && (
+            <>
+              <p className="tw-text-sm tw-font-semibold tw-text-gray-900 tw-mb-1">
+                {aiAnalysis.jobTitle}
+              </p>
+              <p className="tw-text-xs tw-text-gray-600 tw-mb-3">
+                {aiAnalysis.summary}
+              </p>
+              <div className="tw-flex tw-flex-wrap tw-gap-1.5 tw-mb-4">
+                {aiAnalysis.competencies.map((c, i) => (
+                  <span
+                    key={`${c.name}-${i}`}
+                    className={`tw-flex tw-items-center tw-gap-1 tw-text-xs tw-rounded-full tw-px-2.5 tw-py-1 ${
+                      c.importance === "high"
+                        ? "tw-bg-indigo-100 tw-text-indigo-700"
+                        : "tw-bg-gray-100 tw-text-gray-600"
+                    }`}
+                  >
+                    {c.name}
+                    <button
+                      onClick={() =>
+                        setAiAnalysis({
+                          ...aiAnalysis,
+                          competencies: aiAnalysis.competencies.filter(
+                            (_, j) => j !== i,
+                          ),
+                        })
+                      }
+                      className="hover:tw-text-red-500"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="tw-flex tw-gap-2">
+                <button
+                  onClick={matchModules}
+                  disabled={aiBusy || aiAnalysis.competencies.length === 0}
+                  className={`tw-bg-[#5971F6] tw-text-white tw-rounded-full tw-px-5 tw-py-2 tw-text-sm tw-font-semibold ${aiBusy ? "tw-opacity-50" : ""}`}
+                >
+                  {aiBusy ? "…" : t("learning.aiMatchModules")}
+                </button>
+                <button
+                  onClick={() => setAiStep("input")}
+                  className="tw-text-sm tw-text-gray-500"
+                >
+                  {t("learning.cancel")}
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Stap 3 — gematchte modules kiezen en aanmaken */}
+          {aiStep === "matches" && (
+            <>
+              {aiMatches.length === 0 ? (
+                <p className="tw-text-sm tw-text-gray-500 tw-mb-3">
+                  {t("learning.aiNoMatches")}
+                </p>
+              ) : (
+                <div className="tw-flex tw-flex-col tw-gap-1.5 tw-mb-4 tw-max-h-72 tw-overflow-y-auto">
+                  {aiMatches.map((m) => (
+                    <label
+                      key={m.moduleId}
+                      className="tw-flex tw-items-center tw-gap-3 tw-bg-gray-50 tw-rounded-xl tw-px-3 tw-py-2 tw-cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={aiSelected.includes(m.moduleId)}
+                        onChange={(e) =>
+                          setAiSelected((sel) =>
+                            e.target.checked
+                              ? [...sel, m.moduleId]
+                              : sel.filter((id) => id !== m.moduleId),
+                          )
+                        }
+                        className="tw-h-4 tw-w-4"
+                      />
+                      <span className="tw-flex-1 tw-text-sm tw-text-gray-800">
+                        {m.moduleName}
+                        {m.matchingTags.length > 0 && (
+                          <span className="tw-text-[11px] tw-text-gray-400 tw-ml-2">
+                            {m.matchingTags.join(", ")}
+                          </span>
+                        )}
+                      </span>
+                      <span
+                        className={`tw-text-xs tw-font-bold tw-rounded-full tw-px-2 tw-py-0.5 ${
+                          m.matchScore >= 70
+                            ? "tw-bg-green-100 tw-text-green-700"
+                            : m.matchScore >= 40
+                              ? "tw-bg-amber-100 tw-text-amber-700"
+                              : "tw-bg-gray-100 tw-text-gray-500"
+                        }`}
+                      >
+                        {m.matchScore}%
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              <div className="tw-flex tw-gap-2">
+                <button
+                  onClick={createFromAnalysis}
+                  disabled={aiBusy || aiSelected.length === 0}
+                  className={`tw-bg-[#5971F6] tw-text-white tw-rounded-full tw-px-5 tw-py-2 tw-text-sm tw-font-semibold ${aiBusy || aiSelected.length === 0 ? "tw-opacity-50" : ""}`}
+                >
+                  {aiBusy
+                    ? "…"
+                    : `${t("learning.aiCreatePath")} (${aiSelected.length})`}
+                </button>
+                <button
+                  onClick={() => setAiStep("competencies")}
+                  className="tw-text-sm tw-text-gray-500"
+                >
+                  ← {t("learning.cancel")}
+                </button>
+              </div>
+            </>
+          )}
+
           {aiRationale && (
             <p className="tw-text-xs tw-text-gray-600 tw-bg-indigo-50 tw-rounded-xl tw-p-3 tw-mt-3 tw-whitespace-pre-line">
               {aiRationale}
