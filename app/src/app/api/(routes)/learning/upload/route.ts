@@ -8,12 +8,21 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-// Limieten 1-op-1 met productie (server/routes.ts multer-config).
-const LIMITS: Record<string, { maxBytes: number; imageOnly?: boolean }> = {
-  video: { maxBytes: 500 * 1024 * 1024 },
-  image: { maxBytes: 500 * 1024 * 1024 },
-  thumbnail: { maxBytes: 5 * 1024 * 1024, imageOnly: true },
-  document: { maxBytes: 200 * 1024 * 1024 },
+// Limieten 1-op-1 met productie (server/routes.ts multer-config) + een
+// MIME-prefix per soort: bestanden gaan naar de PUBLIEKE DAM, dus we laten geen
+// willekeurige types (bv. .html/.svg) toe die daar als actieve inhoud kunnen
+// worden geserveerd.
+const LIMITS: Record<
+  string,
+  { maxBytes: number; mimePrefixes?: string[] }
+> = {
+  video: { maxBytes: 500 * 1024 * 1024, mimePrefixes: ["video/"] },
+  image: { maxBytes: 500 * 1024 * 1024, mimePrefixes: ["image/"] },
+  thumbnail: { maxBytes: 5 * 1024 * 1024, mimePrefixes: ["image/"] },
+  document: {
+    maxBytes: 200 * 1024 * 1024,
+    mimePrefixes: ["application/", "text/"],
+  },
 };
 
 /**
@@ -45,8 +54,11 @@ export async function POST(req: NextRequest) {
   }
 
   const mimeType = fileEntry.type || "application/octet-stream";
-  if (limit.imageOnly && !mimeType.startsWith("image/")) {
-    return NextResponse.json({ message: "image_only" }, { status: 400 });
+  if (
+    limit.mimePrefixes &&
+    !limit.mimePrefixes.some((p) => mimeType.startsWith(p))
+  ) {
+    return NextResponse.json({ message: "invalid_type" }, { status: 400 });
   }
   if (fileEntry.size > limit.maxBytes) {
     return NextResponse.json({ message: "file_too_large" }, { status: 400 });

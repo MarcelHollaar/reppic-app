@@ -124,19 +124,37 @@ export async function transcribeAudio(
       fd.set("model", whisperModel);
       fd.set("file", file);
       fd.set("response_format", "text");
-      const res = await fetch(`${gatewayBase}/v1/audio/transcriptions`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${gatewayKey}` },
-        body: fd,
-      });
-      const raw = await res.text();
-      if (!res.ok) {
-        throw new Error(`Transcriptie mislukt (${res.status}): ${raw.slice(0, 200)}`);
+      // Time-out zodat een hangende gateway de request niet oneindig blokkeert.
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 120000);
+      let raw: string;
+      let ok: boolean;
+      let status: number;
+      try {
+        const res = await fetch(`${gatewayBase}/v1/audio/transcriptions`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${gatewayKey}` },
+          body: fd,
+          signal: controller.signal,
+        });
+        raw = await res.text();
+        ok = res.ok;
+        status = res.status;
+      } finally {
+        clearTimeout(timer);
+      }
+      if (!ok) {
+        throw new Error(`Transcriptie mislukt (${status}): ${raw.slice(0, 200)}`);
       }
       // response_format=text geeft platte tekst; sommige gateways geven tóch JSON.
+      // Alleen een JSON-OBJECT met .text als zodanig behandelen; puur numerieke/
+      // booleaanse transcripten ("12345") parsen ook, maar zijn gewoon tekst.
       try {
         const parsed = JSON.parse(raw);
-        return typeof parsed === "string" ? parsed : parsed.text || "";
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          return typeof parsed.text === "string" ? parsed.text : raw;
+        }
+        return raw;
       } catch {
         return raw;
       }
@@ -249,6 +267,18 @@ async function splitAudioIntoChunks(
   } finally {
     const fsMod = await import("fs/promises");
     await fsMod.unlink(inputPath).catch(() => {});
+    // Bij een ffmpeg-fout halverwege kunnen er al chunk-bestanden zijn
+    // weggeschreven die de lees-lus niet meer opruimt → hier alsnog opruimen.
+    try {
+      const leftovers = (await fsMod.readdir(tmpDir)).filter((f) =>
+        f.startsWith(`modgen_chunk_${stamp}_`),
+      );
+      for (const f of leftovers) {
+        await fsMod.unlink(path.join(tmpDir, f)).catch(() => {});
+      }
+    } catch {
+      /* opruimen is best-effort */
+    }
   }
 }
 

@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import { toast, ToastContainer } from "react-toastify";
 import authMiddleware from "@/middleware/authMiddleware";
 import { getAuthHeaders } from "@/utils/getAuthHeaders";
-import { sanitizeEmbedHtml } from "@/utils/safeHtml";
+import { extractSafeEmbedUrl } from "@/utils/safeHtml";
 import { ChevronLeftIcon, CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/solid";
 
 type Question = {
@@ -97,20 +97,13 @@ function ModulePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail?.id]);
 
-  const embedHtml = useMemo(() => {
-    if (!detail?.video_embed_code) return null;
-    return sanitizeEmbedHtml(
-      detail.video_embed_code
-        .replace(
-          '<div style="position: relative; overflow: hidden; aspect-ratio: 1920/1080"',
-          "<div",
-        )
-        .replace(
-          /<iframe[^>]*width="[^"]*"[^>]*height="[^"]*"/,
-          '<iframe width="100%" height="100%"',
-        ),
-    );
-  }, [detail?.video_embed_code]);
+  // Uit de embed-code halen we alleen een vertrouwde iframe-URL (Synthesia e.d.)
+  // en renderen daar zelf een schone iframe mee — geen ruwe HTML-injectie, dus
+  // geen stored-XSS-route via video_embed_code.
+  const embedUrl = useMemo(
+    () => extractSafeEmbedUrl(detail?.video_embed_code),
+    [detail?.video_embed_code],
+  );
 
   const markViewed = async () => {
     if (!headers) return;
@@ -208,11 +201,16 @@ function ModulePage() {
       </p>
 
       {/* Speler / inhoud */}
-      {embedHtml ? (
-        <div
-          className="tw-w-full tw-aspect-video tw-bg-black tw-rounded-2xl tw-overflow-hidden tw-mb-4"
-          dangerouslySetInnerHTML={{ __html: embedHtml }}
-        />
+      {embedUrl ? (
+        <div className="tw-w-full tw-aspect-video tw-bg-black tw-rounded-2xl tw-overflow-hidden tw-mb-4">
+          <iframe
+            src={embedUrl}
+            className="tw-w-full tw-h-full"
+            allow="encrypted-media; fullscreen; picture-in-picture"
+            allowFullScreen
+            title={detail.title}
+          />
+        </div>
       ) : detail.video_url ? (
         // 1-op-1 met productie (VideoPlayer.tsx): video's staan als bestand op de
         // FTP/DAM en spelen via een native <video>-speler, NIET via een iframe.

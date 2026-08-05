@@ -9,7 +9,7 @@
  * PDF geconverteerd (pdf_url) voor inline weergave; vereist `libreoffice`
  * op de server (LIBREOFFICE_PATH overschrijft het commando).
  */
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import { promisify } from "util";
 import { randomBytes } from "crypto";
 import path from "path";
@@ -18,15 +18,25 @@ import { prisma } from "@/app/api/utils/prisma";
 import { uploadLearningMedia } from "@/app/api/utils/fileStorage";
 import { USER_ROLE } from "@/configs/constants";
 
-const execAsync = promisify(exec);
+// execFile (geen shell) i.p.v. exec: argumenten worden niet door een shell
+// geïnterpreteerd, dus een geprepareerde bestandsnaam kan geen commando's
+// injecteren.
+const execFileAsync = promisify(execFile);
 
 type AppUser = {
   id: string;
-  role: string;
+  // De middleware levert role als object { name }; ouder gebruik gaf een string.
+  role: string | { name?: string } | null;
   company_id: string | null;
 };
 
-const isSuperAdmin = (u: AppUser) => u.role === USER_ROLE.SUPER_ADMIN;
+const roleName = (u: AppUser): string | undefined =>
+  typeof u.role === "string" ? u.role : (u.role?.name ?? undefined);
+
+const isSuperAdmin = (u: AppUser) => roleName(u) === USER_ROLE.SUPER_ADMIN;
+
+// Alleen deze extensies mogen naar LibreOffice (defensief, náást execFile).
+const CONVERTIBLE_EXTS = new Set([".ppt", ".pptx", ".doc", ".docx"]);
 
 // ─────────────────────────── Office→PDF (LibreOffice) ───────────────────────
 
@@ -60,7 +70,11 @@ export async function convertOfficeToPDF(
   const fs = await import("fs/promises");
   const tempDir = path.join(os.tmpdir(), "office-conversion");
   const tempId = randomBytes(16).toString("hex");
-  const extension = path.extname(originalFilename);
+  // Extensie strikt normaliseren: alleen bekende Office-extensies, anders .bin.
+  // Voorkomt dat een geprepareerde bestandsnaam (bv. `x.pptx"; rm -rf …`) ook
+  // maar iets geks in het pad zet.
+  const rawExt = path.extname(originalFilename).toLowerCase();
+  const extension = CONVERTIBLE_EXTS.has(rawExt) ? rawExt : ".bin";
   const inputPath = path.join(tempDir, `${tempId}-input${extension}`);
   const outputDir = path.join(tempDir, tempId);
   const soffice = process.env.LIBREOFFICE_PATH || "libreoffice";
@@ -69,8 +83,10 @@ export async function convertOfficeToPDF(
     await fs.mkdir(outputDir, { recursive: true });
     await fs.writeFile(inputPath, documentBuffer);
 
-    await execAsync(
-      `${soffice} --headless --convert-to pdf --outdir "${outputDir}" "${inputPath}"`,
+    // execFile met argument-array: geen shell → geen command-injection.
+    await execFileAsync(
+      soffice,
+      ["--headless", "--convert-to", "pdf", "--outdir", outputDir, inputPath],
       { timeout: 60000, maxBuffer: 50 * 1024 * 1024 },
     );
 

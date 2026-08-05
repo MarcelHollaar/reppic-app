@@ -37,7 +37,14 @@ export async function getEmbedding(
   text: string,
   model: string,
 ): Promise<number[] | null> {
-  const baseUrl = process.env.LITELLM_BASE_URL!.replace(/\/$/, "");
+  // Guard: zonder geconfigureerde gateway niet crashen op undefined.replace,
+  // maar netjes null teruggeven (aanroepers vallen dan terug op tekstmatching).
+  const rawBase = process.env.LITELLM_BASE_URL;
+  if (!rawBase) {
+    console.warn("[embeddings] LITELLM_BASE_URL niet gezet — embedding overslaan");
+    return null;
+  }
+  const baseUrl = rawBase.replace(/\/$/, "");
   try {
     const response = await fetch(`${baseUrl}/v1/embeddings`, {
       method: "POST",

@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useDashboardApi } from "@/components/salesDashboards/useDashboardApi";
 import { MetricCard } from "@/components/salesDashboards/MetricCard";
 import { RankedBarList } from "@/components/salesDashboards/RankedBarList";
@@ -9,16 +10,17 @@ const COLORS = ["#f87171", "#f59e0b", "#5971F6", "#34d399", "#a78bfa", "#38bdf8"
 
 export default function ResistancePage() {
   const { get } = useDashboardApi();
+  const { i18n } = useTranslation();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    get("/api/analytics/operational", { lang: "nl" })
+    get("/api/analytics/operational", { lang: i18n.language })
       .then(setData)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [get]);
+  }, [get, i18n.language]);
 
   if (loading) return <Loading />;
   if (error) return <Error message={error} />;

@@ -47,3 +47,46 @@ export function sanitizeEmbedHtml(input: unknown): string {
     .replace(/(src|href)\s*=\s*"(\s*(javascript|vbscript|data:text\/html)[^"]*)"/gi, '$1="#"')
     .replace(/(src|href)\s*=\s*'(\s*(javascript|vbscript|data:text\/html)[^']*)'/gi, "$1='#'");
 }
+
+/**
+ * Vertrouwde video-embed-hosts. Alleen iframes naar deze domeinen (of subdomein
+ * daarvan) mogen worden ingesloten. Uitbreiden is bewust een codewijziging.
+ */
+const ALLOWED_EMBED_HOSTS = [
+  "synthesia.io",
+  "heygen.com",
+  "youtube.com",
+  "youtube-nocookie.com",
+  "youtu.be",
+  "vimeo.com",
+  "google.com", // docs.google.com / drive.google.com (presentaties/pdf)
+  "wistia.com",
+  "loom.com",
+];
+
+/**
+ * Haalt de eerste `<iframe src="…">` uit een embed-snippet en geeft die URL
+ * ALLEEN terug als het een https-URL is naar een host op de allowlist. Zo
+ * spelen de echte trainingsvideo's (Synthesia-iframes) af, terwijl we geen
+ * ongefilterde HTML in de pagina injecteren — dat sluit de stored-XSS-route via
+ * `video_embed_code` (o.a. via `srcdoc`/entity-encoded handlers) volledig af.
+ * Retourneert null als er geen vertrouwde iframe-bron in zit.
+ */
+export function extractSafeEmbedUrl(input: unknown): string | null {
+  const html = String(input ?? "");
+  const iframe = /<iframe\b[^>]*\bsrc\s*=\s*("([^"]*)"|'([^']*)')/i.exec(html);
+  const raw = iframe?.[2] ?? iframe?.[3];
+  if (!raw) return null;
+  let url: URL;
+  try {
+    url = new URL(raw.trim());
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:") return null;
+  const host = url.hostname.toLowerCase();
+  const ok = ALLOWED_EMBED_HOSTS.some(
+    (h) => host === h || host.endsWith(`.${h}`),
+  );
+  return ok ? url.toString() : null;
+}

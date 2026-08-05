@@ -80,21 +80,31 @@ export const DashboardSyncService = {
         { expiresIn: "5m" },
       );
 
-      const response = await fetch(`${DASHBOARD_API_URL}/api/transcripts`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          filename,
-          content,
-          language: normalizeLanguage(language),
-          status: "pending",
-          isPdf: false,
-          ...(coachingAnalysis ? { coachingAnalysis } : {}),
-        }),
-      });
+      // Time-out: een trage/hangende dashboard-backend mag de gespreksanalyse
+      // (en de daaropvolgende rapport-mails) niet onbepaald blokkeren.
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 30000);
+      let response: Response;
+      try {
+        response = await fetch(`${DASHBOARD_API_URL}/api/transcripts`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            filename,
+            content,
+            language: normalizeLanguage(language),
+            status: "pending",
+            isPdf: false,
+            ...(coachingAnalysis ? { coachingAnalysis } : {}),
+          }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => "");

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { learningAuthMiddleware } from "../../../../middleware/authMiddleware";
-import { LEARNING_ROLE } from "@/configs/constants";
+import { LEARNING_ROLE, USER_ROLE } from "@/configs/constants";
 import {
   matchModulesToJobProfile,
   categorizeMatches,
@@ -22,6 +22,14 @@ export async function POST(req: NextRequest) {
   );
   if (authCheck) return authCheck;
 
+  const user = (req as any).user;
+  // Tenant-scope: superadmin mag met ?company_id een bedrijf kiezen (of globaal);
+  // een learning_admin is vast aan het eigen bedrijf.
+  const isSuperAdmin = user?.role?.name === USER_ROLE.SUPER_ADMIN;
+  const companyId = isSuperAdmin
+    ? req.nextUrl.searchParams.get("company_id") || null
+    : (user?.company_id ?? null);
+
   const body = await req.json().catch(() => ({}));
   if (!Array.isArray(body.competencies)) {
     return NextResponse.json({ message: "invalid" }, { status: 400 });
@@ -30,6 +38,7 @@ export async function POST(req: NextRequest) {
     const result = await matchModulesToJobProfile(
       body.competencies,
       String(body.jobProfileText || ""),
+      companyId,
     );
     return NextResponse.json({
       data: { ...result, categorized: categorizeMatches(result.matches) },

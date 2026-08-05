@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "invalid" }, { status: 400 });
   }
 
-  const isSuperAdmin = user.role === USER_ROLE.SUPER_ADMIN;
+  const isSuperAdmin = user?.role?.name === USER_ROLE.SUPER_ADMIN;
   const companyId = isSuperAdmin
     ? req.nextUrl.searchParams.get("company_id") || null
     : user.company_id;

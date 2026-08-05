@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { learningAuthMiddleware } from "../../../../../middleware/authMiddleware";
-import { LEARNING_ROLE } from "@/configs/constants";
+import { authMiddleware } from "../../../../../middleware/authMiddleware";
+import { USER_ROLE } from "@/configs/constants";
 import { updateAllModuleEmbeddings } from "@/lib/services/learningPathAnalysisService";
 
 export const runtime = "nodejs";
@@ -13,10 +13,8 @@ export const maxDuration = 300;
  * verversen (bv. na een modelwissel); standaard alleen ontbrekende.
  */
 export async function POST(req: NextRequest) {
-  const authCheck = await learningAuthMiddleware(
-    req,
-    LEARNING_ROLE.LEARNING_ADMIN,
-  );
+  // Platform-brede, dure operatie over álle bedrijven → alleen superadmin.
+  const authCheck = await authMiddleware(req, USER_ROLE.SUPER_ADMIN);
   if (authCheck) return authCheck;
   const body = await req.json().catch(() => ({}));
   try {

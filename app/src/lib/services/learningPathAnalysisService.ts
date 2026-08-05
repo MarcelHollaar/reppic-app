@@ -177,6 +177,9 @@ export async function updateAllModuleEmbeddings(
 export async function matchModulesToJobProfile(
   competencies: ExtractedCompetency[],
   jobProfileText: string,
+  // Tenant-scoping: alleen globale (company_id NULL) + eigen-bedrijf-modules.
+  // Zonder dit lekken titels/omschrijvingen/tags van álle bedrijven.
+  companyId: string | null,
 ): Promise<{
   matches: ModuleMatch[];
   totalModulesAnalyzed: number;
@@ -198,6 +201,7 @@ export async function matchModulesToJobProfile(
   }
 
   const modules = await prisma.learningModule.findMany({
+    where: { OR: [{ company_id: null }, { company_id: companyId }] },
     select: {
       id: true,
       title: true,
@@ -285,6 +289,21 @@ export async function createPathFromAnalysis(input: {
   competencies: ExtractedCompetency[];
   jobProfileText: string;
 }) {
+  // Alleen modules die zichtbaar zijn voor dit bedrijf (globaal of eigen bedrijf)
+  // mogen aan het pad gekoppeld worden — voorkomt cross-tenant koppelingen via
+  // meegestuurde vreemde module-ids. Volgorde uit de invoer blijft behouden.
+  const visible = await prisma.learningModule.findMany({
+    where: {
+      id: { in: input.selectedModuleIds },
+      OR: [{ company_id: null }, { company_id: input.companyId }],
+    },
+    select: { id: true },
+  });
+  const visibleIds = new Set(visible.map((m) => m.id));
+  const allowedModuleIds = input.selectedModuleIds.filter((id) =>
+    visibleIds.has(id),
+  );
+
   const path = await prisma.learningPath.create({
     data: {
       job_function: input.jobFunction,
@@ -294,13 +313,13 @@ export async function createPathFromAnalysis(input: {
       job_role_id: input.jobRoleId,
     },
   });
-  for (let i = 0; i < input.selectedModuleIds.length; i++) {
-    await prisma.learningPathModule.create({
-      data: {
+  if (allowedModuleIds.length > 0) {
+    await prisma.learningPathModule.createMany({
+      data: allowedModuleIds.map((moduleId, i) => ({
         learning_path_id: path.id,
-        module_id: input.selectedModuleIds[i],
+        module_id: moduleId,
         order_index: i + 1,
-      },
+      })),
     });
   }
   await prisma.learningPathCompetency.create({
