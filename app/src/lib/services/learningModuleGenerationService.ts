@@ -98,7 +98,9 @@ export function truncateText(text: string, maxTokens = 8000): string {
 // ─────────────────────── audio/video-transcriptie ───────────────────────
 
 /**
- * Whisper-transcriptie (direct OpenAI; gateway heeft geen audio-endpoint).
+ * Whisper-transcriptie via de LiteLLM-gateway (/v1/audio/transcriptions;
+ * geverifieerd werkend met openai/whisper-1 op 2026-08-05). Terugval op
+ * directe OpenAI als de gateway ontbreekt maar OPENAI_API_KEY wél gezet is.
  * Bestanden >25MB worden met ffmpeg in ~15MB-mp3-chunks geknipt (64k bitrate),
  * elk apart getranscribeerd en samengevoegd — 1-op-1 met productie.
  */
@@ -106,12 +108,50 @@ export async function transcribeAudio(
   buffer: Buffer,
   filename: string,
 ): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error("transcription_unavailable"); // geen OPENAI_API_KEY gezet
+  const gatewayBase = process.env.LITELLM_BASE_URL?.replace(/\/$/, "");
+  const gatewayKey = process.env.LITELLM_API_KEY;
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (!(gatewayBase && gatewayKey) && !openaiKey) {
+    throw new Error("transcription_unavailable");
   }
-  const OpenAI = (await import("openai")).default;
-  const openai = new OpenAI({ apiKey });
+  const whisperModel = gatewayBase
+    ? process.env.LEARNING_TRANSCRIPTION_MODEL?.trim() || "openai/whisper-1"
+    : "whisper-1";
+
+  const transcribeOne = async (file: File): Promise<string> => {
+    if (gatewayBase && gatewayKey) {
+      const fd = new FormData();
+      fd.set("model", whisperModel);
+      fd.set("file", file);
+      fd.set("response_format", "text");
+      const res = await fetch(`${gatewayBase}/v1/audio/transcriptions`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${gatewayKey}` },
+        body: fd,
+      });
+      const raw = await res.text();
+      if (!res.ok) {
+        throw new Error(`Transcriptie mislukt (${res.status}): ${raw.slice(0, 200)}`);
+      }
+      // response_format=text geeft platte tekst; sommige gateways geven tóch JSON.
+      try {
+        const parsed = JSON.parse(raw);
+        return typeof parsed === "string" ? parsed : parsed.text || "";
+      } catch {
+        return raw;
+      }
+    }
+    const OpenAI = (await import("openai")).default;
+    const openai = new OpenAI({ apiKey: openaiKey });
+    const transcription = await openai.audio.transcriptions.create({
+      file,
+      model: "whisper-1",
+      response_format: "text",
+    });
+    return typeof transcription === "string"
+      ? transcription
+      : String(transcription);
+  };
 
   const MAX_SIZE = 25 * 1024 * 1024;
   const buffers =
@@ -124,14 +164,7 @@ export async function transcribeAudio(
     const name = buffers.length > 1 ? `chunk_${i}.mp3` : filename;
     const type = buffers.length > 1 ? "audio/mpeg" : mimeTypeFor(filename);
     const file = new File([new Uint8Array(buffers[i])], name, { type });
-    const transcription = await openai.audio.transcriptions.create({
-      file,
-      model: "whisper-1",
-      response_format: "text",
-    });
-    parts.push(
-      typeof transcription === "string" ? transcription : String(transcription),
-    );
+    parts.push(await transcribeOne(file));
   }
 
   const combined = parts.join(" ").trim();
