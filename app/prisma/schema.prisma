@@ -684,6 +684,8 @@ model LearningModule {
 
   @@index([company_id], name: "idx_learning_modules_company")
   @@index([learning_path_type], name: "idx_learning_modules_path_type")
+  embedding LearningModuleEmbedding?
+
   @@map("learning_modules")
 }
 
@@ -752,6 +754,8 @@ model LearningPath {
   job_role         JobRole?                     @relation(fields: [job_role_id], references: [id], onDelete: SetNull)
   path_modules     LearningPathModule[]
   path_assignments UserLearningPathAssignment[]
+
+  competency LearningPathCompetency?
 
   @@map("learning_paths")
 }
@@ -905,4 +909,122 @@ model LearningModuleTranslation {
 
   @@unique([module_id, language], name: "learning_module_translation_unique")
   @@map("learning_module_translations")
+}
+
+// LMS 1:1 P3 — Help-center (port van productie HelpCategory/HelpArticle).
+// Artikelen per rol (all/learner/admin), taal en optionele paginacontext;
+// beheer door learning_admin/superadmin.
+model HelpCategory {
+  id          String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  name        String   @map("name") @db.Text
+  description String?  @map("description") @db.Text
+  icon        String?  @map("icon") @db.Text
+  sort_order  Int      @default(0) @map("sort_order")
+  created_at  DateTime @default(now()) @map("created_at")
+
+  articles HelpArticle[]
+
+  @@map("help_categories")
+}
+
+model HelpArticle {
+  id           String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  category_id  String?  @map("category_id") @db.VarChar(40)
+  title        String   @map("title") @db.Text
+  content      String   @map("content") @db.Text
+  excerpt      String?  @map("excerpt") @db.Text
+  page_context String?  @map("page_context") @db.Text
+  target_role  String   @default("all") @map("target_role") @db.Text
+  language     String   @default("en") @map("language") @db.Text
+  is_published Boolean  @default(true) @map("is_published")
+  sort_order   Int      @default(0) @map("sort_order")
+  view_count   Int      @default(0) @map("view_count")
+  created_by   String?  @map("created_by") @db.VarChar(40)
+  created_at   DateTime @default(now()) @map("created_at")
+  updated_at   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  category HelpCategory? @relation(fields: [category_id], references: [id], onDelete: SetNull)
+
+  @@index([page_context], name: "idx_help_articles_page_context")
+  @@map("help_articles")
+}
+
+// LMS 1:1 P4 — embedding-gebaseerde module-matching (port van productie
+// ModuleEmbedding + LearningPathCompetency). Embedding als JSON-string,
+// zelfde aanpak als LibraryDocumentEmbedding.
+model LearningModuleEmbedding {
+  id         String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  module_id  String   @unique @map("module_id") @db.VarChar(40)
+  embedding  String   @map("embedding") @db.Text
+  model      String   @map("model") @db.VarChar(100)
+  created_at DateTime @default(now()) @map("created_at")
+  updated_at DateTime @updatedAt @map("updated_at")
+
+  module LearningModule @relation(fields: [module_id], references: [id], onDelete: Cascade)
+
+  @@map("learning_module_embeddings")
+}
+
+// Competenties die bij een AI-gegenereerd leerpad zijn gebruikt (audit +
+// herberekening), port van productie learning_path_competencies.
+model LearningPathCompetency {
+  id               String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  learning_path_id String   @unique @map("learning_path_id") @db.VarChar(40)
+  competencies     Json     @map("competencies")
+  job_profile_text String?  @map("job_profile_text") @db.Text
+  created_at       DateTime @default(now()) @map("created_at")
+
+  learning_path LearningPath @relation(fields: [learning_path_id], references: [id], onDelete: Cascade)
+
+  @@map("learning_path_competencies")
+}
+
+// LMS 1:1 P5 — media-bibliotheek / Brand Kit (port van productie MediaItem).
+// company_id NULL = globale media (superadmin, sales-skills); anders
+// bedrijfsmedia (learning_admin, knowledge). pdf_url = automatisch
+// geconverteerde PDF van Office-bestanden (LibreOffice).
+model LearningMediaItem {
+  id          String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  name        String   @map("name") @db.Text
+  type        String   @map("type") @db.Text
+  url         String   @map("url") @db.Text
+  pdf_url     String?  @map("pdf_url") @db.Text
+  file_size   Int?     @map("file_size")
+  mime_type   String?  @map("mime_type") @db.Text
+  tags        Json?    @map("tags")
+  company_id  String?  @map("company_id") @db.VarChar(40)
+  uploaded_by String?  @map("uploaded_by") @db.VarChar(40)
+  created_at  DateTime @default(now()) @map("created_at")
+
+  @@index([company_id], name: "idx_media_items_company")
+  @@map("media_items")
+}
+
+// LMS 1:1 P6 — losse competentietags voor leermodules (port van productie
+// Tag; tabel heet learning_tags omdat "tags" al door video-tags bezet is).
+model LearningTag {
+  id          String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  name        String   @unique @map("name") @db.Text
+  category    String?  @map("category") @db.Text
+  description String?  @map("description") @db.Text
+  created_by  String?  @map("created_by") @db.VarChar(40)
+  usage_count Int      @default(0) @map("usage_count")
+  created_at  DateTime @default(now()) @map("created_at")
+
+  @@map("learning_tags")
+}
+
+// LMS 1:1 P6 — onboarding-tourvoortgang (port van productie UserTourProgress;
+// in productie alleen API, geen UI — hier idem).
+model UserTourProgress {
+  id           String    @id @default(uuid()) @map("id") @db.VarChar(40)
+  user_id      String    @map("user_id") @db.VarChar(40)
+  tour_id      String    @map("tour_id") @db.Text
+  completed    Boolean   @default(false) @map("completed")
+  current_step Int       @default(0) @map("current_step")
+  completed_at DateTime? @map("completed_at")
+  updated_at   DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([user_id, tour_id], name: "user_tour_unique")
+  @@map("user_tour_progress")
 }

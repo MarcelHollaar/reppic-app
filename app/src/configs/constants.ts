@@ -66,6 +66,7 @@ export const PLATFORM_SETTING_KEYS = {
   // LMS-analyses, elk koppelbaar aan een eigen LiteLLM-model:
   LMS_PATHGEN_LITELLM_MODEL: "lms_pathgen_litellm_model", // AI-leerpadgeneratie (chat)
   LMS_TRANSLATION_LITELLM_MODEL: "lms_translation_litellm_model", // module-vertalingen (chat)
+  LMS_MODULEGEN_LITELLM_MODEL: "lms_modulegen_litellm_model", // AI-modulegeneratie (chat)
   LMS_EMBEDDINGS_MODEL: "lms_embeddings_model", // kennisbibliotheek (embeddings)
 } as const;
 

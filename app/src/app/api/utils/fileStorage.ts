@@ -1,5 +1,6 @@
 import { Client } from "basic-ftp";
 import { Readable } from "stream";
+import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
 
@@ -571,3 +572,37 @@ export async function deleteConversationDirectory(
     throw new Error("Failed to delete conversation.");
   }
 }
+
+/**
+ * Uploadt LMS-media (modulevideo, thumbnail, afbeelding, document) naar de DAM
+ * en geeft de VOLLEDIGE publieke URL terug — 1-op-1 met de productie-LMS
+ * (server/upload.ts `uploadFile`). Bestanden komen in dezelfde DAM-map als de
+ * geïmporteerde productie-content (`<FTP_FOLDER_LMS>/public/…`), zodat een
+ * nieuw geüploade video en een geïmporteerde video dezelfde URL-vorm hebben en
+ * direct in de native <video>-speler afspelen.
+ *
+ * @param fileBuffer  Inhoud van het bestand.
+ * @param originalName Oorspronkelijke bestandsnaam (voor de extensie).
+ * @returns Volledige publieke URL, bv. `${FTP_PUBLIC_URL}/lms-reppic/public/<uuid>.mp4`.
+ */
+export const uploadLearningMedia = async (
+  fileBuffer: ArrayBuffer,
+  originalName: string
+): Promise<string> => {
+  const folderLms = process.env.FTP_FOLDER_LMS || "lms-reppic";
+  const relativeFolder = `${folderLms}/public`;
+
+  // Unieke bestandsnaam (zoals productie met nanoid): voorkomt overschrijven en
+  // maakt de URL onraadbaar. Extensie uit de originele naam behouden.
+  const extMatch = String(originalName || "").match(/\.([A-Za-z0-9]{1,8})$/);
+  const ext = extMatch ? extMatch[1].toLowerCase() : "bin";
+  const uniqueName = `${randomUUID()}.${ext}`;
+
+  // saveFileToFtp geeft het relatieve pad terug (`lms-reppic/public/<naam>`).
+  const relativePath = await saveFileToFtp(fileBuffer, uniqueName, relativeFolder);
+
+  const publicBase = (process.env.FTP_PUBLIC_URL || "").replace(/\/$/, "");
+  // Zonder geconfigureerde DAM-URL (lokale dev-fallback) geven we het relatieve
+  // pad terug; met DAM-URL de volledige, direct-afspeelbare URL.
+  return publicBase ? `${publicBase}/${relativePath}` : `/${relativePath}`;
+};

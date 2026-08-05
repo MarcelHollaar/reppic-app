@@ -88,6 +88,17 @@ function SettingsPage() {
       ),
     });
     dynamicTabs.push({
+      label: t("settings.lmsModulegenModel"),
+      value: "lms-modulegen-model",
+      component: (
+        <LmsChatModelComponent
+          endpoint="/api/platform-settings/lms-modulegen-model"
+          titleKey="lmsModelSettings.modulegenTitle"
+          noteKey="lmsModelSettings.modulegenNote"
+        />
+      ),
+    });
+    dynamicTabs.push({
       label: t("settings.lmsEmbeddingsModel"),
       value: "lms-embeddings-model",
       component: <LmsEmbeddingsModelComponent />,

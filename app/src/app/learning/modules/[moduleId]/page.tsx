@@ -214,13 +214,18 @@ function ModulePage() {
           dangerouslySetInnerHTML={{ __html: embedHtml }}
         />
       ) : detail.video_url ? (
+        // 1-op-1 met productie (VideoPlayer.tsx): video's staan als bestand op de
+        // FTP/DAM en spelen via een native <video>-speler, NIET via een iframe.
         <div className="tw-w-full tw-aspect-video tw-bg-black tw-rounded-2xl tw-overflow-hidden tw-mb-4">
-          <iframe
+          <video
             src={detail.video_url}
             className="tw-w-full tw-h-full"
-            allowFullScreen
-            title={detail.title}
-          />
+            controls
+            playsInline
+          >
+            <source src={detail.video_url} type="video/mp4" />
+            {t("learning.browserNoVideoSupport")}
+          </video>
         </div>
       ) : null}
 

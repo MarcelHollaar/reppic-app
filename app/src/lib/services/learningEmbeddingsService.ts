@@ -32,7 +32,8 @@ async function resolveEmbeddingsModel(): Promise<string | null> {
   }
 }
 
-async function getEmbedding(
+// Ook gebruikt door learningPathAnalysisService (P4 module-embeddings).
+export async function getEmbedding(
   text: string,
   model: string,
 ): Promise<number[] | null> {
@@ -66,7 +67,8 @@ async function getEmbedding(
   }
 }
 
-function cosineSimilarity(a: number[], b: number[]): number {
+// Ook gebruikt door learningPathAnalysisService (P4 module-matching).
+export function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length || a.length === 0) return 0;
   let dot = 0;
   let normA = 0;

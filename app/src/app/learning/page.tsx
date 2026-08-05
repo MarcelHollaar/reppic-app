@@ -138,6 +138,13 @@ function LearningPage() {
           >
             {t("learning.progress")} →
           </button>
+          <button
+            onClick={() => router.push("/learning/help")}
+            className="tw-text-sm tw-font-semibold tw-text-[#5971F6] hover:tw-underline"
+            title={t("learning.helpCenter")}
+          >
+            ?
+          </button>
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { learningAuthMiddleware } from "../../../../../middleware/authMiddleware";
 import { learningService } from "@/lib/services/learningService";
+import { updateModuleEmbedding } from "@/lib/services/learningPathAnalysisService";
 import { LEARNING_ROLE } from "@/configs/constants";
 
 /** GET /api/learning/manage/modules/[moduleId] — beheerdetail (mét antwoorden). */
@@ -50,6 +51,8 @@ export async function PUT(
           : 403;
     return NextResponse.json({ message: result.error }, { status });
   }
+  // Embedding verversen voor de semantische leerpad-matching (P4).
+  updateModuleEmbedding(moduleId).catch(() => {});
   return NextResponse.json({ data: result.data });
 }
 

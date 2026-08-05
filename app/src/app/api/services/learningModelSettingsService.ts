@@ -21,7 +21,8 @@ import {
 
 export type LmsChatSettingKey =
   | typeof PLATFORM_SETTING_KEYS.LMS_PATHGEN_LITELLM_MODEL
-  | typeof PLATFORM_SETTING_KEYS.LMS_TRANSLATION_LITELLM_MODEL;
+  | typeof PLATFORM_SETTING_KEYS.LMS_TRANSLATION_LITELLM_MODEL
+  | typeof PLATFORM_SETTING_KEYS.LMS_MODULEGEN_LITELLM_MODEL;
 
 type StoredRoute = { routeId: string; model: string; tag: string | null };
 
