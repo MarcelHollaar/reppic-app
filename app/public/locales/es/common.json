@@ -1330,7 +1330,13 @@
     "aiAnalyzeProfile": "Analizar perfil",
     "aiMatchModules": "Buscar módulos coincidentes",
     "aiCreatePath": "Crear ruta de aprendizaje",
-    "aiNoMatches": "No se encontraron módulos coincidentes. Añade etiquetas de competencia a los módulos o genera primero los embeddings."
+    "aiNoMatches": "No se encontraron módulos coincidentes. Añade etiquetas de competencia a los módulos o genera primero los embeddings.",
+    "mediaLibrary": "Biblioteca de medios",
+    "mediaLibraryNote": "Sube vídeos, imágenes, presentaciones y documentos. Los archivos de Office se convierten automáticamente a PDF. Copia la URL para usarla en un módulo.",
+    "mediaUpload": "Subir medios",
+    "mediaEmpty": "Aún no hay medios.",
+    "mediaConversionFailed": "La conversión de Office a PDF falló. ¿Está LibreOffice instalado en el servidor?",
+    "mediaUrlCopied": "URL copiada"
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modelo para la generación de rutas con IA",

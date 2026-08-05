@@ -1377,7 +1377,13 @@
     "aiAnalyzeProfile": "Analyze profile",
     "aiMatchModules": "Find matching modules",
     "aiCreatePath": "Create learning path",
-    "aiNoMatches": "No matching modules found. Add competency tags to modules or generate embeddings first."
+    "aiNoMatches": "No matching modules found. Add competency tags to modules or generate embeddings first.",
+    "mediaLibrary": "Media library",
+    "mediaLibraryNote": "Upload videos, images, presentations and documents. Office files are automatically converted to PDF. Copy the URL to use in a module.",
+    "mediaUpload": "Upload media",
+    "mediaEmpty": "No media yet.",
+    "mediaConversionFailed": "Office to PDF conversion failed. Is LibreOffice installed on the server?",
+    "mediaUrlCopied": "URL copied"
   },
   "lmsModelSettings": {
     "pathgenTitle": "Model for AI learning-path generation",

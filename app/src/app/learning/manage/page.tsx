@@ -87,6 +87,12 @@ function ManageModulesPage() {
             {t("learning.categories")}
           </button>
           <button
+            onClick={() => router.push("/learning/manage/media")}
+            className="tw-text-sm tw-font-semibold tw-text-[#5971F6] tw-bg-indigo-50 hover:tw-bg-indigo-100 tw-rounded-full tw-px-4 tw-py-2"
+          >
+            {t("learning.mediaLibrary")}
+          </button>
+          <button
             onClick={() => router.push("/learning/manage/help")}
             className="tw-text-sm tw-font-semibold tw-text-[#5971F6] tw-bg-indigo-50 hover:tw-bg-indigo-100 tw-rounded-full tw-px-4 tw-py-2"
           >

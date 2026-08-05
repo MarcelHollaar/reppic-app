@@ -868,3 +868,24 @@ model LearningPathCompetency {
 
   @@map("learning_path_competencies")
 }
+
+// LMS 1:1 P5 — media-bibliotheek / Brand Kit (port van productie MediaItem).
+// company_id NULL = globale media (superadmin, sales-skills); anders
+// bedrijfsmedia (learning_admin, knowledge). pdf_url = automatisch
+// geconverteerde PDF van Office-bestanden (LibreOffice).
+model LearningMediaItem {
+  id          String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  name        String   @map("name") @db.Text
+  type        String   @map("type") @db.Text
+  url         String   @map("url") @db.Text
+  pdf_url     String?  @map("pdf_url") @db.Text
+  file_size   Int?     @map("file_size")
+  mime_type   String?  @map("mime_type") @db.Text
+  tags        Json?    @map("tags")
+  company_id  String?  @map("company_id") @db.VarChar(40)
+  uploaded_by String?  @map("uploaded_by") @db.VarChar(40)
+  created_at  DateTime @default(now()) @map("created_at")
+
+  @@index([company_id], name: "idx_media_items_company")
+  @@map("media_items")
+}

@@ -1376,7 +1376,13 @@
     "aiAnalyzeProfile": "Profiel analyseren",
     "aiMatchModules": "Passende modules zoeken",
     "aiCreatePath": "Leerpad aanmaken",
-    "aiNoMatches": "Geen passende modules gevonden. Voeg competentietags toe aan modules of genereer eerst embeddings."
+    "aiNoMatches": "Geen passende modules gevonden. Voeg competentietags toe aan modules of genereer eerst embeddings.",
+    "mediaLibrary": "Mediabibliotheek",
+    "mediaLibraryNote": "Upload video's, afbeeldingen, presentaties en documenten. Office-bestanden worden automatisch naar PDF geconverteerd. Kopieer de URL om in een module te gebruiken.",
+    "mediaUpload": "Media uploaden",
+    "mediaEmpty": "Nog geen media.",
+    "mediaConversionFailed": "Office-naar-PDF-conversie mislukt. Is LibreOffice op de server geïnstalleerd?",
+    "mediaUrlCopied": "URL gekopieerd"
   },
   "lmsModelSettings": {
     "pathgenTitle": "Model voor AI-leerpadgeneratie",

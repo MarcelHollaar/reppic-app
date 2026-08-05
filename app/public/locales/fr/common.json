@@ -1341,7 +1341,13 @@
     "aiAnalyzeProfile": "Analyser le profil",
     "aiMatchModules": "Trouver des modules correspondants",
     "aiCreatePath": "Créer le parcours",
-    "aiNoMatches": "Aucun module correspondant trouvé. Ajoutez des tags de compétence aux modules ou générez d'abord les embeddings."
+    "aiNoMatches": "Aucun module correspondant trouvé. Ajoutez des tags de compétence aux modules ou générez d'abord les embeddings.",
+    "mediaLibrary": "Médiathèque",
+    "mediaLibraryNote": "Téléversez des vidéos, images, présentations et documents. Les fichiers Office sont automatiquement convertis en PDF. Copiez l'URL pour l'utiliser dans un module.",
+    "mediaUpload": "Téléverser un média",
+    "mediaEmpty": "Pas encore de médias.",
+    "mediaConversionFailed": "La conversion Office vers PDF a échoué. LibreOffice est-il installé sur le serveur ?",
+    "mediaUrlCopied": "URL copiée"
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modèle pour la génération de parcours par IA",
