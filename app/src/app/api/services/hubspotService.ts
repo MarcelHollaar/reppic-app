@@ -338,14 +338,27 @@ export class HubspotService {
       }
     }
 
-    // 3) Deals: via bedrijf (breedst) of anders via het contact
-    const dealParentPath = hubspotCompanyId
-      ? `/crm/v4/objects/companies/${hubspotCompanyId}/associations/deals?limit=100`
-      : `/crm/v4/objects/contacts/${contact.id}/associations/deals?limit=100`;
-    const dealAssoc = await this.apiGet(token, dealParentPath);
-    const dealIds: string[] = (dealAssoc?.results ?? []).map((r: any) =>
-      String(r.toObjectId)
+    // 3) Deals: via bedrijf ÉN via het contact (samengevoegd). In de
+    // praktijk hangen deals regelmatig alleen aan het contact en niet aan
+    // het bedrijf — alleen bedrijf-deals opvragen mist die.
+    const dealIdSet = new Set<string>();
+    const contactDeals = await this.apiGet(
+      token,
+      `/crm/v4/objects/contacts/${contact.id}/associations/deals?limit=100`
     );
+    for (const r of contactDeals?.results ?? []) {
+      dealIdSet.add(String(r.toObjectId));
+    }
+    if (hubspotCompanyId) {
+      const companyDeals = await this.apiGet(
+        token,
+        `/crm/v4/objects/companies/${hubspotCompanyId}/associations/deals?limit=100`
+      );
+      for (const r of companyDeals?.results ?? []) {
+        dealIdSet.add(String(r.toObjectId));
+      }
+    }
+    const dealIds: string[] = [...dealIdSet];
 
     if (dealIds.length > 0) {
       const stageMeta = await this.getStageMetadata(token, companyId);
