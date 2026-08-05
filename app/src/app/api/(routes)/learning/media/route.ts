@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     if ("error" in result) {
       return NextResponse.json(
         { message: result.error },
-        { status: errStatus(result.error) },
+        { status: errStatus(String(result.error)) },
       );
     }
     return NextResponse.json({ data: result.data }, { status: 201 });
