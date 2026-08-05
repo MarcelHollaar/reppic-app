@@ -34,6 +34,7 @@ function ModuleFormInner() {
 
   const [loading, setLoading] = useState(Boolean(moduleId));
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState<string | null>(null);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [form, setForm] = useState({
     title: "",
@@ -120,6 +121,42 @@ function ModuleFormInner() {
 
   const set = (key: string, value: any) =>
     setForm((f) => ({ ...f, [key]: value }));
+
+  // Bestand uploaden naar de DAM (1-op-1 met productie): het bestand gaat naar
+  // /api/learning/upload en de teruggegeven publieke URL komt in het doelveld
+  // (video_url of thumbnail_url). Zo speelt een geüploade video direct af.
+  const uploadMedia = async (
+    kind: "video" | "thumbnail",
+    file: File | null,
+    targetField: "video_url" | "thumbnail_url",
+  ) => {
+    if (!file) return;
+    const headers = getAuthHeaders({}, true);
+    if (!headers) return;
+    setUploading(kind);
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+      fd.set("kind", kind);
+      const res = await fetch("/api/learning/upload", {
+        method: "POST",
+        headers,
+        body: fd,
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.message || "upload_failed");
+      set(targetField, json.data.url);
+      toast.success(t("learning.uploadSuccess"));
+    } catch (e: any) {
+      toast.error(
+        e?.message === "file_too_large"
+          ? t("learning.uploadTooLarge")
+          : t("learning.uploadFailed"),
+      );
+    } finally {
+      setUploading(null);
+    }
+  };
 
   const generateTranslations = async (langs: string[]) => {
     if (!moduleId || langs.length === 0) return;
@@ -366,6 +403,62 @@ function ModuleFormInner() {
               onChange={(e) => set("video_url", e.target.value)}
               placeholder="https://…"
             />
+            <label className="tw-mt-2 tw-inline-flex tw-items-center tw-gap-2 tw-cursor-pointer tw-text-sm tw-text-[#5971F6] tw-font-semibold">
+              <input
+                type="file"
+                accept="video/*"
+                className="tw-hidden"
+                disabled={uploading === "video"}
+                onChange={(e) =>
+                  uploadMedia("video", e.target.files?.[0] || null, "video_url")
+                }
+              />
+              {uploading === "video"
+                ? `⏳ ${t("learning.uploading")}`
+                : `⬆ ${t("learning.uploadVideo")}`}
+            </label>
+          </div>
+        </div>
+        <div>
+          <label className="tw-text-sm tw-font-semibold tw-text-gray-800">
+            {t("learning.thumbnail")}
+          </label>
+          <div className="tw-flex tw-items-center tw-gap-3">
+            {form.thumbnail_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={form.thumbnail_url}
+                alt=""
+                className="tw-h-16 tw-w-28 tw-object-cover tw-rounded-lg tw-border tw-border-gray-200"
+              />
+            ) : null}
+            <label className="tw-inline-flex tw-items-center tw-gap-2 tw-cursor-pointer tw-text-sm tw-text-[#5971F6] tw-font-semibold">
+              <input
+                type="file"
+                accept="image/*"
+                className="tw-hidden"
+                disabled={uploading === "thumbnail"}
+                onChange={(e) =>
+                  uploadMedia(
+                    "thumbnail",
+                    e.target.files?.[0] || null,
+                    "thumbnail_url",
+                  )
+                }
+              />
+              {uploading === "thumbnail"
+                ? `⏳ ${t("learning.uploading")}`
+                : `⬆ ${t("learning.uploadThumbnail")}`}
+            </label>
+            {form.thumbnail_url ? (
+              <button
+                type="button"
+                onClick={() => set("thumbnail_url", "")}
+                className="tw-text-sm tw-text-gray-400 hover:tw-text-red-500"
+              >
+                ✕
+              </button>
+            ) : null}
           </div>
         </div>
         <div>

@@ -1289,7 +1289,14 @@
     "translations": "Traduzioni",
     "translationsHint": "Genera con IA le traduzioni di titolo, descrizione e quiz per le altre lingue. Gli studenti vedono il modulo nella loro lingua.",
     "translateAll": "Traduci tutto",
-    "browserNoVideoSupport": "Il tuo browser non supporta il tag video."
+    "browserNoVideoSupport": "Il tuo browser non supporta il tag video.",
+    "thumbnail": "Miniatura",
+    "uploading": "Caricamento…",
+    "uploadVideo": "Carica video",
+    "uploadThumbnail": "Carica miniatura",
+    "uploadSuccess": "Caricamento completato",
+    "uploadFailed": "Caricamento non riuscito",
+    "uploadTooLarge": "Il file è troppo grande"
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modello per la generazione di percorsi con IA",

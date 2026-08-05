@@ -1336,7 +1336,14 @@
     "translations": "Translations",
     "translationsHint": "Generate translations of title, description and quiz for the other languages via AI. Learners see the module in their own language.",
     "translateAll": "Translate all",
-    "browserNoVideoSupport": "Your browser does not support the video tag."
+    "browserNoVideoSupport": "Your browser does not support the video tag.",
+    "thumbnail": "Thumbnail",
+    "uploading": "Uploading…",
+    "uploadVideo": "Upload video",
+    "uploadThumbnail": "Upload thumbnail",
+    "uploadSuccess": "Upload complete",
+    "uploadFailed": "Upload failed",
+    "uploadTooLarge": "File is too large"
   },
   "lmsModelSettings": {
     "pathgenTitle": "Model for AI learning-path generation",

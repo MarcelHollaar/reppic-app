@@ -1300,7 +1300,14 @@
     "translations": "Traductions",
     "translationsHint": "Générez par IA les traductions du titre, de la description et du quiz pour les autres langues. Les apprenants voient le module dans leur langue.",
     "translateAll": "Tout traduire",
-    "browserNoVideoSupport": "Votre navigateur ne prend pas en charge la vidéo."
+    "browserNoVideoSupport": "Votre navigateur ne prend pas en charge la vidéo.",
+    "thumbnail": "Miniature",
+    "uploading": "Téléversement…",
+    "uploadVideo": "Téléverser une vidéo",
+    "uploadThumbnail": "Téléverser une miniature",
+    "uploadSuccess": "Téléversement terminé",
+    "uploadFailed": "Échec du téléversement",
+    "uploadTooLarge": "Le fichier est trop volumineux"
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modèle pour la génération de parcours par IA",

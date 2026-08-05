@@ -1289,7 +1289,14 @@
     "translations": "Traducciones",
     "translationsHint": "Genera con IA las traducciones del título, la descripción y el cuestionario para los demás idiomas. Los alumnos ven el módulo en su idioma.",
     "translateAll": "Traducir todo",
-    "browserNoVideoSupport": "Tu navegador no admite el elemento de vídeo."
+    "browserNoVideoSupport": "Tu navegador no admite el elemento de vídeo.",
+    "thumbnail": "Miniatura",
+    "uploading": "Subiendo…",
+    "uploadVideo": "Subir vídeo",
+    "uploadThumbnail": "Subir miniatura",
+    "uploadSuccess": "Subida completada",
+    "uploadFailed": "Error al subir",
+    "uploadTooLarge": "El archivo es demasiado grande"
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modelo para la generación de rutas con IA",

@@ -1299,7 +1299,14 @@
     "translations": "Übersetzungen",
     "translationsHint": "Erzeuge per KI Übersetzungen von Titel, Beschreibung und Quiz für die anderen Sprachen. Lernende sehen das Modul in ihrer Sprache.",
     "translateAll": "Alles übersetzen",
-    "browserNoVideoSupport": "Ihr Browser unterstützt das Video-Tag nicht."
+    "browserNoVideoSupport": "Ihr Browser unterstützt das Video-Tag nicht.",
+    "thumbnail": "Vorschaubild",
+    "uploading": "Wird hochgeladen…",
+    "uploadVideo": "Video hochladen",
+    "uploadThumbnail": "Vorschaubild hochladen",
+    "uploadSuccess": "Upload abgeschlossen",
+    "uploadFailed": "Upload fehlgeschlagen",
+    "uploadTooLarge": "Datei ist zu groß"
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modell für die KI-Lernpfaderstellung",

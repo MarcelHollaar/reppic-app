@@ -1335,7 +1335,14 @@
     "translations": "Vertalingen",
     "translationsHint": "Genereer met AI vertalingen van titel, beschrijving en quiz voor de andere talen. Cursisten zien de module in hun eigen taal.",
     "translateAll": "Alles vertalen",
-    "browserNoVideoSupport": "Je browser ondersteunt geen video."
+    "browserNoVideoSupport": "Je browser ondersteunt geen video.",
+    "thumbnail": "Thumbnail",
+    "uploading": "Uploaden…",
+    "uploadVideo": "Video uploaden",
+    "uploadThumbnail": "Thumbnail uploaden",
+    "uploadSuccess": "Upload voltooid",
+    "uploadFailed": "Upload mislukt",
+    "uploadTooLarge": "Bestand is te groot"
   },
   "lmsModelSettings": {
     "pathgenTitle": "Model voor AI-leerpadgeneratie",
