@@ -170,7 +170,8 @@
     "dashboardModel": "Dashboardmodel",
     "lmsPathgenModel": "LMS: leerpad-AI",
     "lmsTranslationModel": "LMS: vertalingen",
-    "lmsEmbeddingsModel": "LMS: bibliotheek-zoeken"
+    "lmsEmbeddingsModel": "LMS: bibliotheek-zoeken",
+    "lmsModulegenModel": "AI-modulegeneratie"
   },
   "analysisModelSettings": {
     "title": "LiteLLM-model voor gespreksanalyse",
@@ -1342,7 +1343,15 @@
     "uploadThumbnail": "Thumbnail uploaden",
     "uploadSuccess": "Upload voltooid",
     "uploadFailed": "Upload mislukt",
-    "uploadTooLarge": "Bestand is te groot"
+    "uploadTooLarge": "Bestand is te groot",
+    "aiGenerateTitle": "Module genereren met AI",
+    "aiGenerateNote": "Upload een document (PDF, Word, PowerPoint) of een video-/audiobestand. De AI maakt de titel, beschrijving, duur en minimaal 15 quizvragen — controleer en pas aan vóór het opslaan.",
+    "aiGenerateButton": "Genereren met AI",
+    "aiModuleGenerating": "Module genereren…",
+    "aiGenerateWait": "Dit kan enkele minuten duren bij grote of audio-/videobestanden.",
+    "aiGenerateSuccess": "Module gegenereerd — controleer en sla op.",
+    "aiGenerateInsufficientText": "Het bestand bevat onvoldoende tekst om een module te genereren.",
+    "aiGenerateNoTranscription": "Audio-/videotranscriptie is niet geconfigureerd op deze server."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Model voor AI-leerpadgeneratie",
@@ -1353,6 +1362,8 @@
     "embeddingsNote": "Wordt gebruikt om documenten te indexeren en voor semantisch zoeken. Indexeren en zoeken gebruiken altijd hetzelfde model.",
     "embeddingsReindexWarning": "Bij het wisselen van model worden alle {{count}} geïndexeerde documenten op de achtergrond geherindexeerd. Tot een document opnieuw is geïndexeerd valt het tijdelijk buiten semantisch zoeken.",
     "embeddingsFromEnv": "De huidige waarde komt uit de serverconfiguratie (LEARNING_EMBEDDINGS_MODEL); een keuze hier opslaan overschrijft die.",
-    "embeddingsDisabled": "— uit (gewoon tekstzoeken) —"
+    "embeddingsDisabled": "— uit (gewoon tekstzoeken) —",
+    "modulegenTitle": "Model voor AI-modulegeneratie",
+    "modulegenNote": "Dit model analyseert geüploade documenten, video en audio en genereert leermodules met quizvragen."
   }
 }

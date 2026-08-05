@@ -169,7 +169,8 @@
     "dashboardModel": "Modello dashboard",
     "lmsPathgenModel": "LMS: IA percorsi",
     "lmsTranslationModel": "LMS: traduzioni",
-    "lmsEmbeddingsModel": "LMS: ricerca libreria"
+    "lmsEmbeddingsModel": "LMS: ricerca libreria",
+    "lmsModulegenModel": "Generazione moduli con IA"
   },
   "form": {
     "firstName": "Nome",
@@ -1296,7 +1297,15 @@
     "uploadThumbnail": "Carica miniatura",
     "uploadSuccess": "Caricamento completato",
     "uploadFailed": "Caricamento non riuscito",
-    "uploadTooLarge": "Il file è troppo grande"
+    "uploadTooLarge": "Il file è troppo grande",
+    "aiGenerateTitle": "Genera modulo con IA",
+    "aiGenerateNote": "Carica un documento (PDF, Word, PowerPoint) o un file video/audio. L'IA crea titolo, descrizione, durata e almeno 15 domande di quiz — controlla e modifica prima di salvare.",
+    "aiGenerateButton": "Genera con IA",
+    "aiModuleGenerating": "Generazione del modulo…",
+    "aiGenerateWait": "Con file grandi o audio/video può richiedere alcuni minuti.",
+    "aiGenerateSuccess": "Modulo generato — controlla e salva.",
+    "aiGenerateInsufficientText": "Il file non contiene abbastanza testo per generare un modulo.",
+    "aiGenerateNoTranscription": "La trascrizione audio/video non è configurata su questo server."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modello per la generazione di percorsi con IA",
@@ -1307,6 +1316,8 @@
     "embeddingsNote": "Usato per indicizzare i documenti e per la ricerca semantica. Indicizzazione e ricerca usano sempre lo stesso modello.",
     "embeddingsReindexWarning": "Cambiando modello, tutti i {{count}} documenti indicizzati vengono reindicizzati in background. Finché un documento non è reindicizzato resta temporaneamente escluso dalla ricerca semantica.",
     "embeddingsFromEnv": "Il valore attuale proviene dalla configurazione del server (LEARNING_EMBEDDINGS_MODEL); una scelta salvata qui la sovrascrive.",
-    "embeddingsDisabled": "— disattivato (ricerca testuale semplice) —"
+    "embeddingsDisabled": "— disattivato (ricerca testuale semplice) —",
+    "modulegenTitle": "Modello per la generazione di moduli con IA",
+    "modulegenNote": "Questo modello analizza documenti, video e audio caricati e genera moduli di apprendimento con domande di quiz."
   }
 }

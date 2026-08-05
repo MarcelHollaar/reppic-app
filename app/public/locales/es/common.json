@@ -169,7 +169,8 @@
     "dashboardModel": "Modelo de panel",
     "lmsPathgenModel": "LMS: IA de rutas",
     "lmsTranslationModel": "LMS: traducciones",
-    "lmsEmbeddingsModel": "LMS: búsqueda biblioteca"
+    "lmsEmbeddingsModel": "LMS: búsqueda biblioteca",
+    "lmsModulegenModel": "Generación de módulos con IA"
   },
   "form": {
     "firstName": "Nombre",
@@ -1296,7 +1297,15 @@
     "uploadThumbnail": "Subir miniatura",
     "uploadSuccess": "Subida completada",
     "uploadFailed": "Error al subir",
-    "uploadTooLarge": "El archivo es demasiado grande"
+    "uploadTooLarge": "El archivo es demasiado grande",
+    "aiGenerateTitle": "Generar módulo con IA",
+    "aiGenerateNote": "Sube un documento (PDF, Word, PowerPoint) o un archivo de vídeo/audio. La IA crea el título, la descripción, la duración y al menos 15 preguntas de quiz — revisa y ajusta antes de guardar.",
+    "aiGenerateButton": "Generar con IA",
+    "aiModuleGenerating": "Generando módulo…",
+    "aiGenerateWait": "Esto puede tardar unos minutos con archivos grandes o de audio/vídeo.",
+    "aiGenerateSuccess": "Módulo generado — revisa y guarda.",
+    "aiGenerateInsufficientText": "El archivo no contiene suficiente texto para generar un módulo.",
+    "aiGenerateNoTranscription": "La transcripción de audio/vídeo no está configurada en este servidor."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modelo para la generación de rutas con IA",
@@ -1307,6 +1316,8 @@
     "embeddingsNote": "Se usa para indexar documentos y para la búsqueda semántica. La indexación y la búsqueda siempre usan el mismo modelo.",
     "embeddingsReindexWarning": "Al cambiar de modelo se reindexan en segundo plano los {{count}} documentos indexados. Hasta que un documento se reindexe queda temporalmente fuera de la búsqueda semántica.",
     "embeddingsFromEnv": "El valor actual proviene de la configuración del servidor (LEARNING_EMBEDDINGS_MODEL); guardar una elección aquí la sobrescribe.",
-    "embeddingsDisabled": "— desactivado (búsqueda de texto simple) —"
+    "embeddingsDisabled": "— desactivado (búsqueda de texto simple) —",
+    "modulegenTitle": "Modelo para la generación de módulos con IA",
+    "modulegenNote": "Este modelo analiza documentos, vídeos y audios subidos y genera módulos de aprendizaje con preguntas de quiz."
   }
 }

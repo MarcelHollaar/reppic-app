@@ -170,7 +170,8 @@
     "dashboardModel": "Dashboard model",
     "lmsPathgenModel": "LMS: learning-path AI",
     "lmsTranslationModel": "LMS: translations",
-    "lmsEmbeddingsModel": "LMS: library search"
+    "lmsEmbeddingsModel": "LMS: library search",
+    "lmsModulegenModel": "AI module generation"
   },
   "analysisModelSettings": {
     "title": "Conversation analysis model",
@@ -1343,7 +1344,15 @@
     "uploadThumbnail": "Upload thumbnail",
     "uploadSuccess": "Upload complete",
     "uploadFailed": "Upload failed",
-    "uploadTooLarge": "File is too large"
+    "uploadTooLarge": "File is too large",
+    "aiGenerateTitle": "Generate module with AI",
+    "aiGenerateNote": "Upload a document (PDF, Word, PowerPoint) or a video/audio file. The AI creates the title, description, duration and at least 15 quiz questions — review and adjust before saving.",
+    "aiGenerateButton": "Generate with AI",
+    "aiModuleGenerating": "Generating module…",
+    "aiGenerateWait": "This can take a few minutes for large or audio/video files.",
+    "aiGenerateSuccess": "Module generated — review and save.",
+    "aiGenerateInsufficientText": "The file does not contain enough text to generate a module.",
+    "aiGenerateNoTranscription": "Audio/video transcription is not configured on this server."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Model for AI learning-path generation",
@@ -1354,6 +1363,8 @@
     "embeddingsNote": "Used to index documents and for semantic search. Indexing and search always use the same model.",
     "embeddingsReindexWarning": "Changing the model re-indexes all {{count}} indexed documents in the background. Until a document is re-indexed it is temporarily excluded from semantic search.",
     "embeddingsFromEnv": "Current value comes from the server configuration (LEARNING_EMBEDDINGS_MODEL); saving a choice here overrides it.",
-    "embeddingsDisabled": "— off (plain text search) —"
+    "embeddingsDisabled": "— off (plain text search) —",
+    "modulegenTitle": "Model for AI module generation",
+    "modulegenNote": "This model analyzes uploaded documents, video and audio and generates learning modules with quiz questions."
   }
 }

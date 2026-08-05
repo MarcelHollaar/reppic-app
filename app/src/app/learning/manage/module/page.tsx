@@ -35,6 +35,8 @@ function ModuleFormInner() {
   const [loading, setLoading] = useState(Boolean(moduleId));
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
+  const [genFile, setGenFile] = useState<File | null>(null);
+  const [generating, setGenerating] = useState(false);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [form, setForm] = useState({
     title: "",
@@ -121,6 +123,57 @@ function ModuleFormInner() {
 
   const set = (key: string, value: any) =>
     setForm((f) => ({ ...f, [key]: value }));
+
+  // AI-modulegeneratie (1-op-1 met productie): upload → /api/learning/
+  // generate-module → formulier + quizvragen voorvullen; daarna gewoon
+  // bewerken en opslaan zoals altijd.
+  const generateFromFile = async () => {
+    if (!genFile) return;
+    const headers = getAuthHeaders({}, true);
+    if (!headers) return;
+    setGenerating(true);
+    try {
+      const fd = new FormData();
+      fd.set("document", genFile);
+      const res = await fetch("/api/learning/generate-module", {
+        method: "POST",
+        headers,
+        body: fd,
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.message || "generation_failed");
+      const mod = json.data.module;
+      // Productie-categorieën (slug) worden geen category_id; de admin kiest
+      // zelf de categorie in het formulier. Duration/titel/beschrijving en
+      // vragen nemen we 1-op-1 over.
+      setForm((f) => ({
+        ...f,
+        title: mod.title || f.title,
+        description: mod.description || f.description,
+        duration: mod.duration || f.duration,
+      }));
+      setQuestions(
+        (mod.questions || []).map((q: any) => ({
+          question: q.question,
+          options: q.options,
+          correct_answer: q.correctAnswer,
+          explanation: "",
+        })),
+      );
+      toast.success(t("learning.aiGenerateSuccess"));
+    } catch (e: any) {
+      const msg = String(e?.message || "");
+      toast.error(
+        msg === "insufficient_text"
+          ? t("learning.aiGenerateInsufficientText")
+          : msg === "transcription_unavailable"
+            ? t("learning.aiGenerateNoTranscription")
+            : t("learning.aiGenerateFailed"),
+      );
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   // Bestand uploaden naar de DAM (1-op-1 met productie): het bestand gaat naar
   // /api/learning/upload en de teruggegeven publieke URL komt in het doelveld
@@ -286,6 +339,47 @@ function ModuleFormInner() {
       <h1 className="tw-text-2xl tw-font-bold tw-text-gray-900 tw-mb-6">
         {moduleId ? t("learning.editModule") : t("learning.addModule")}
       </h1>
+
+      {/* AI-modulegeneratie (1-op-1 met productie AIModuleGenerator): upload
+          een document/video/audio, de AI vult het formulier + quizvragen. */}
+      {!moduleId && (
+        <div className="tw-bg-indigo-50 tw-border tw-border-indigo-100 tw-rounded-2xl tw-p-6 tw-mb-6">
+          <h2 className="tw-text-base tw-font-bold tw-text-gray-900 tw-mb-1">
+            ✨ {t("learning.aiGenerateTitle")}
+          </h2>
+          <p className="tw-text-sm tw-text-gray-600 tw-mb-3">
+            {t("learning.aiGenerateNote")}
+          </p>
+          <div className="tw-flex tw-flex-col sm:tw-flex-row sm:tw-items-center tw-gap-3">
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.mp3,.wav,.m4a,.ogg,.mp4,.mov,.webm"
+              disabled={generating}
+              onChange={(e) => setGenFile(e.target.files?.[0] || null)}
+              className="tw-text-sm"
+            />
+            <button
+              type="button"
+              onClick={generateFromFile}
+              disabled={!genFile || generating}
+              className={`tw-bg-[#5971F6] tw-text-white tw-rounded-full tw-px-5 tw-py-2 tw-text-sm tw-font-semibold ${
+                !genFile || generating
+                  ? "tw-opacity-50 tw-cursor-not-allowed"
+                  : "hover:tw-bg-[#4a5fe0]"
+              }`}
+            >
+              {generating
+                ? `⏳ ${t("learning.aiModuleGenerating")}`
+                : t("learning.aiGenerateButton")}
+            </button>
+          </div>
+          {generating && (
+            <p className="tw-text-xs tw-text-gray-500 tw-mt-2">
+              {t("learning.aiGenerateWait")}
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="tw-flex tw-flex-col tw-gap-4 tw-bg-white tw-rounded-2xl tw-border tw-border-gray-200 tw-p-6">
         <div>

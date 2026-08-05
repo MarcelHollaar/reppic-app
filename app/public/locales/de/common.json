@@ -169,7 +169,8 @@
     "dashboardModel": "Dashboard-Modell",
     "lmsPathgenModel": "LMS: Lernpfad-KI",
     "lmsTranslationModel": "LMS: Übersetzungen",
-    "lmsEmbeddingsModel": "LMS: Bibliothekssuche"
+    "lmsEmbeddingsModel": "LMS: Bibliothekssuche",
+    "lmsModulegenModel": "KI-Modulerstellung"
   },
   "form": {
     "firstName": "Vorname",
@@ -1306,7 +1307,15 @@
     "uploadThumbnail": "Vorschaubild hochladen",
     "uploadSuccess": "Upload abgeschlossen",
     "uploadFailed": "Upload fehlgeschlagen",
-    "uploadTooLarge": "Datei ist zu groß"
+    "uploadTooLarge": "Datei ist zu groß",
+    "aiGenerateTitle": "Modul mit KI erstellen",
+    "aiGenerateNote": "Laden Sie ein Dokument (PDF, Word, PowerPoint) oder eine Video-/Audiodatei hoch. Die KI erstellt Titel, Beschreibung, Dauer und mindestens 15 Quizfragen — vor dem Speichern prüfen und anpassen.",
+    "aiGenerateButton": "Mit KI erstellen",
+    "aiModuleGenerating": "Modul wird erstellt…",
+    "aiGenerateWait": "Bei großen oder Audio-/Videodateien kann dies einige Minuten dauern.",
+    "aiGenerateSuccess": "Modul erstellt — prüfen und speichern.",
+    "aiGenerateInsufficientText": "Die Datei enthält nicht genügend Text, um ein Modul zu erstellen.",
+    "aiGenerateNoTranscription": "Audio-/Videotranskription ist auf diesem Server nicht konfiguriert."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modell für die KI-Lernpfaderstellung",
@@ -1317,6 +1326,8 @@
     "embeddingsNote": "Wird zum Indexieren von Dokumenten und für die semantische Suche verwendet. Indexierung und Suche nutzen immer dasselbe Modell.",
     "embeddingsReindexWarning": "Beim Modellwechsel werden alle {{count}} indexierten Dokumente im Hintergrund neu indexiert. Bis zur Neuindexierung ist ein Dokument vorübergehend von der semantischen Suche ausgeschlossen.",
     "embeddingsFromEnv": "Der aktuelle Wert stammt aus der Serverkonfiguration (LEARNING_EMBEDDINGS_MODEL); eine hier gespeicherte Auswahl überschreibt ihn.",
-    "embeddingsDisabled": "— aus (einfache Textsuche) —"
+    "embeddingsDisabled": "— aus (einfache Textsuche) —",
+    "modulegenTitle": "Modell für die KI-Modulerstellung",
+    "modulegenNote": "Dieses Modell analysiert hochgeladene Dokumente, Videos und Audio und erstellt Lernmodule mit Quizfragen."
   }
 }
