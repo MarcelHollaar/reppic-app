@@ -1,5 +1,12 @@
 import { EXPECTED_FASES } from "./promptSchema";
 import { transcriptAnalysisPromptService } from "@/app/api/services/transcriptAnalysisPromptService";
+import {
+  DE_FASE_REFERENCE,
+  EN_FASE_REFERENCE,
+  FR_FASE_REFERENCE,
+  ES_FASE_REFERENCE,
+  IT_FASE_REFERENCE,
+} from "./faseReferenceTranslations";
 
 export type LlmFn = (prompt: string) => Promise<string>;
 
@@ -68,7 +75,7 @@ const NL_FASE_REFERENCE = [
     Titel: "Doel van het gesprek",
     Doel: "Het doel hierbij is om de verwachtingen van de klant te managen door duidelijk het doel van de afspraak te communiceren en te vragen of de klant hiermee instemt of misschien een ander of aanvullend doel heeft",
     AnalysePunten:
-      "1, Legt de verkoper het doel van de afspraak duidelijk uit aan de klant?\n2. Wordt er expliciet gevraagd of de klant akkoord gaat met het voorgestelde doel?\n3. Geeft de klant een duidelijke bevestiging of input over de verwachtingen van de afspraak?",
+      "1. Legt de verkoper het doel van de afspraak duidelijk uit aan de klant?\n2. Wordt er expliciet gevraagd of de klant akkoord gaat met het voorgestelde doel?\n3. Geeft de klant een duidelijke bevestiging of input over de verwachtingen van de afspraak?",
     GoedVoorbeeld:
       'Start: De verkoper zegt: "Mijn doel vandaag is om te bespreken hoe wij uw processen kunnen optimaliseren en samen tot concrete stappen te komen. Klinkt dat goed voor u?"\nEffect: De klant reageert bevestigend.',
     DeelsGoedVoorbeeld:
@@ -346,12 +353,19 @@ const NL_FASE_REFERENCE = [
  * Fase reference data per language code. The reference texts (Doel,
  * voorbeelden, toekenning) are shown in the UI alongside each phase score.
  *
- * Currently only NL exists; other languages fall back to NL. To add a
- * language: translate NL_FASE_REFERENCE (keep `Fase` and `Titel` identical —
- * they are the matching keys) and register it here, e.g. `en: EN_FASE_REFERENCE`.
+ * All 6 supported languages are present: NL is the source (here), the other
+ * five live in faseReferenceTranslations.ts (per-fase translated via the
+ * gateway, structure-validated — Fase/Titel/punten identical). Unknown codes
+ * fall back to NL. `as typeof NL_FASE_REFERENCE` because the translated arrays
+ * are fresh literals with the same shape.
  */
 const FASE_REFERENCE_BY_LANG: Record<string, typeof NL_FASE_REFERENCE> = {
   nl: NL_FASE_REFERENCE,
+  de: DE_FASE_REFERENCE as typeof NL_FASE_REFERENCE,
+  en: EN_FASE_REFERENCE as typeof NL_FASE_REFERENCE,
+  fr: FR_FASE_REFERENCE as typeof NL_FASE_REFERENCE,
+  es: ES_FASE_REFERENCE as typeof NL_FASE_REFERENCE,
+  it: IT_FASE_REFERENCE as typeof NL_FASE_REFERENCE,
 };
 
 function getFaseReferenceForLanguage(language: string) {
@@ -363,6 +377,31 @@ function getFaseReferenceForLanguage(language: string) {
 // 1. Prompt builder
 // ---------------------------------------------------------------------------
 
+/**
+ * ISO-taalcode → volledige Engelse taalnaam voor in de LLM-prompt.
+ *
+ * Een kale code als instructie ("Respond in: **de**") is bewezen te zwak: bij
+ * een Duitse gebruiker kwam de feedback in het Nederlands terug (de prompt
+ * bevat veel Nederlandse voorbeeldlijsten, en "de" is bovendien een Nederlands
+ * lidwoord). Met de volledige naam ("German") volgt het model de instructie
+ * wél — empirisch geverifieerd tegen de echte gateway (A/B/C-test 2026-08-04).
+ * Zelfde conventie als LANG_NAMES in de dashboard-backend en LANG_NAME in
+ * learningTranslationService.
+ */
+const LLM_LANGUAGE_NAMES: Record<string, string> = {
+  nl: "Dutch",
+  en: "English",
+  de: "German",
+  fr: "French",
+  es: "Spanish",
+  it: "Italian",
+};
+
+function toLlmLanguageName(language: string): string {
+  const key = language.trim().slice(0, 2).toLowerCase();
+  return LLM_LANGUAGE_NAMES[key] ?? language;
+}
+
 async function buildPrompt(
   gesprek: string,
   language: string,
@@ -373,7 +412,7 @@ async function buildPrompt(
   // replaceAll; {{gesprek}} appears once.
   const template = await transcriptAnalysisPromptService.getActiveContent();
   let prompt = template
-    .replaceAll("{{language}}", language)
+    .replaceAll("{{language}}", toLlmLanguageName(language))
     .replace("{{gesprek}}", gesprek);
 
   // Optional per-company terminology glossary: inject it right before the
@@ -693,10 +732,10 @@ function validate(data) {
       .filter((l) => l.length > 0)
       // Drop the model's own "no learning points" placeholder if it slipped in.
       .filter((l) => l.toLowerCase() !== "geen leerpunten geïdentificeerd");
+    // Geen placeholder-tekst opslaan: een hardcoded NL-zin zou bij een
+    // anderstalige gebruiker in het Nederlands verschijnen. Leeg laten; de UI
+    // toont dan (vertaald) niets voor deze sectie.
     result.Leerpunten = rawLeerpunten.slice(0, 4);
-    if (result.Leerpunten.length === 0) {
-      result.Leerpunten = ["Geen leerpunten geïdentificeerd"];
-    }
   }
 
   // Weerstanden
