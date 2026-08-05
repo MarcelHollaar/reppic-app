@@ -1299,7 +1299,8 @@
     "aiProfileTooShort": "Le profil de poste est trop court — ajoutez plus de détails.",
     "translations": "Traductions",
     "translationsHint": "Générez par IA les traductions du titre, de la description et du quiz pour les autres langues. Les apprenants voient le module dans leur langue.",
-    "translateAll": "Tout traduire"
+    "translateAll": "Tout traduire",
+    "browserNoVideoSupport": "Votre navigateur ne prend pas en charge la vidéo."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modèle pour la génération de parcours par IA",

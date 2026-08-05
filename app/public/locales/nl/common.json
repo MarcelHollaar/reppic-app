@@ -1334,7 +1334,8 @@
     "aiProfileTooShort": "Het functieprofiel is te kort — voeg meer detail toe.",
     "translations": "Vertalingen",
     "translationsHint": "Genereer met AI vertalingen van titel, beschrijving en quiz voor de andere talen. Cursisten zien de module in hun eigen taal.",
-    "translateAll": "Alles vertalen"
+    "translateAll": "Alles vertalen",
+    "browserNoVideoSupport": "Je browser ondersteunt geen video."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Model voor AI-leerpadgeneratie",

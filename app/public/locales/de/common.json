@@ -1298,7 +1298,8 @@
     "aiProfileTooShort": "Das Funktionsprofil ist zu kurz — fügen Sie mehr Details hinzu.",
     "translations": "Übersetzungen",
     "translationsHint": "Erzeuge per KI Übersetzungen von Titel, Beschreibung und Quiz für die anderen Sprachen. Lernende sehen das Modul in ihrer Sprache.",
-    "translateAll": "Alles übersetzen"
+    "translateAll": "Alles übersetzen",
+    "browserNoVideoSupport": "Ihr Browser unterstützt das Video-Tag nicht."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modell für die KI-Lernpfaderstellung",

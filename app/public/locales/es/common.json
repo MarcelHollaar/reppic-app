@@ -1288,7 +1288,8 @@
     "aiProfileTooShort": "El perfil del puesto es demasiado corto — añade más detalle.",
     "translations": "Traducciones",
     "translationsHint": "Genera con IA las traducciones del título, la descripción y el cuestionario para los demás idiomas. Los alumnos ven el módulo en su idioma.",
-    "translateAll": "Traducir todo"
+    "translateAll": "Traducir todo",
+    "browserNoVideoSupport": "Tu navegador no admite el elemento de vídeo."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modelo para la generación de rutas con IA",

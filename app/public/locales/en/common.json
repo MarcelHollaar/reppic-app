@@ -1335,7 +1335,8 @@
     "aiProfileTooShort": "The job profile is too short — add more detail.",
     "translations": "Translations",
     "translationsHint": "Generate translations of title, description and quiz for the other languages via AI. Learners see the module in their own language.",
-    "translateAll": "Translate all"
+    "translateAll": "Translate all",
+    "browserNoVideoSupport": "Your browser does not support the video tag."
   },
   "lmsModelSettings": {
     "pathgenTitle": "Model for AI learning-path generation",
