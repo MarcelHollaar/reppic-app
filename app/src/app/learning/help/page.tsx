@@ -25,7 +25,6 @@ type HelpArticle = {
 type HelpCategory = { id: string; name: string; icon: string | null };
 
 function HelpCenterPage() {
-  const router = useRouter();
   const { t, i18n } = useTranslation("common");
   const [articles, setArticles] = useState<HelpArticle[]>([]);
   const [categories, setCategories] = useState<HelpCategory[]>([]);
