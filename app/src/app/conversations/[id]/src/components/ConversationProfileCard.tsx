@@ -2,6 +2,12 @@ import i18n from "@/lib/i18n";
 import { t } from "i18next";
 import { useRouter } from "next/navigation";
 import moment from "moment-timezone";
+import { useState } from "react";
+import { toast } from "react-toastify";
+import { getAuthHeaders } from "@/utils/getAuthHeaders";
+import PrepContentView, {
+  type PrepContentShape,
+} from "@/components/prep/PrepContentView";
 
 interface ConversationProfileCardProps {
   conversationId: string;
@@ -23,10 +29,46 @@ export const ConversationProfileCard = ({
   createdAt,
 }: ConversationProfileCardProps) => {
   const router = useRouter();
+  const [isPreparing, setIsPreparing] = useState(false);
+  const [prepContent, setPrepContent] = useState<PrepContentShape | null>(null);
 
   const handleDevelopmentPlanClick = () => {
     // LMS is nu native onderdeel van de app: direct naar de leeromgeving.
     router.push("/learning");
+  };
+
+  const handlePrepareNext = async () => {
+    setIsPreparing(true);
+    try {
+      const headers = getAuthHeaders();
+      if (!headers) return;
+      const res = await fetch("/api/prep/generate?send=false", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ conversationId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.message || t("meetings.generateFailed"));
+        return;
+      }
+      if (data.content) {
+        setPrepContent(data.content);
+      } else if (data.result?.status === "skipped") {
+        toast.info(
+          t(
+            `meetings.skip_${data.result?.skipReason ?? "unknown"}`,
+            t("meetings.statusSkipped")
+          )
+        );
+      } else {
+        toast.error(t("meetings.generateFailed"));
+      }
+    } catch {
+      toast.error(t("meetings.generateFailed"));
+    } finally {
+      setIsPreparing(false);
+    }
   };
 
   return (
@@ -93,7 +135,7 @@ export const ConversationProfileCard = ({
             </div>
           </div>
 
-          <div className="tw-flex tw-flex-col lg:tw-flex-row tw-gap-3 tw-mb-6">
+          <div className="tw-flex tw-flex-col lg:tw-flex-row tw-gap-3 tw-mb-3">
             <button
               onClick={() =>
                 router.push(`/conversations/insights/${conversationId}`)
@@ -108,6 +150,25 @@ export const ConversationProfileCard = ({
             >
               {t("conversationsListing.developmentPlan")}
             </button>
+          </div>
+
+          {/* Gespreksvoorbereiding: bereid het volgende gesprek met deze
+              klant voor (zelfde motor als de automatische prep-mail). */}
+          <div className="tw-mb-6">
+            <button
+              onClick={handlePrepareNext}
+              disabled={isPreparing}
+              className="tw-w-full tw-bg-[#EEF1FE] tw-text-[#3D52D5] tw-rounded-xl tw-px-4 tw-py-2 tw-text-sm tw-font-semibold hover:tw-bg-[#E2E7FD] tw-transition-colors disabled:tw-opacity-50"
+            >
+              {isPreparing
+                ? t("meetings.generating")
+                : t("conversationsListing.prepareNext")}
+            </button>
+            {prepContent && (
+              <div className="tw-mt-4 tw-border tw-border-gray-100 tw-rounded-xl tw-p-4 tw-bg-white">
+                <PrepContentView content={prepContent} />
+              </div>
+            )}
           </div>
         </div>
       </div>

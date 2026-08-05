@@ -33,8 +33,7 @@ export function buildPrepEmailHtml(
     intro: string;
     meetingAt: string;
     goalTitle: string;
-    missedTitle: string;
-    resistancesTitle: string;
+    infoGoalsTitle: string;
     questionsTitle: string;
     dealTitle: string;
     attentionTitle: string;
@@ -65,33 +64,17 @@ export function buildPrepEmailHtml(
   parts.push(`<h3 style="${SECTION_STYLE}">${escapeHtml(labels.goalTitle)}</h3>`);
   parts.push(`<p style="line-height:1.5;">${escapeHtml(content.doel)}</p>`);
 
-  // Gemiste fases
-  if (content.gemiste_fases.length > 0) {
+  // Informatiedoelen — wat wil je dit gesprek leren/bereiken en waarom
+  if (content.informatie_doelen.length > 0) {
     parts.push(
-      `<h3 style="${SECTION_STYLE}">${escapeHtml(labels.missedTitle)}</h3>`
+      `<h3 style="${SECTION_STYLE}">${escapeHtml(labels.infoGoalsTitle)}</h3>`
     );
     parts.push(`<ul style="${LIST_STYLE}">`);
-    for (const item of content.gemiste_fases) {
+    for (const item of content.informatie_doelen) {
       parts.push(
         `<li style="${ITEM_STYLE}"><strong>${escapeHtml(
-          item.fase
-        )}:</strong> ${escapeHtml(item.advies)}</li>`
-      );
-    }
-    parts.push("</ul>");
-  }
-
-  // Weerstanden
-  if (content.weerstanden.length > 0) {
-    parts.push(
-      `<h3 style="${SECTION_STYLE}">${escapeHtml(labels.resistancesTitle)}</h3>`
-    );
-    parts.push(`<ul style="${LIST_STYLE}">`);
-    for (const item of content.weerstanden) {
-      parts.push(
-        `<li style="${ITEM_STYLE}"><strong>${escapeHtml(
-          item.weerstand
-        )}:</strong> ${escapeHtml(item.advies)}</li>`
+          item.onderwerp
+        )}</strong>${item.waarom ? ` — ${escapeHtml(item.waarom)}` : ""}</li>`
       );
     }
     parts.push("</ul>");
@@ -151,16 +134,10 @@ export function buildPrepEmailText(
   lines.push(`${params.meetingTitle}${params.prospectName ? ` — ${params.prospectName}` : ""}`);
   lines.push("");
   lines.push(`${labels.goalTitle}: ${content.doel}`);
-  if (content.gemiste_fases.length > 0) {
-    lines.push("", labels.missedTitle);
-    for (const item of content.gemiste_fases) {
-      lines.push(`- ${item.fase}: ${item.advies}`);
-    }
-  }
-  if (content.weerstanden.length > 0) {
-    lines.push("", labels.resistancesTitle);
-    for (const item of content.weerstanden) {
-      lines.push(`- ${item.weerstand}: ${item.advies}`);
+  if (content.informatie_doelen.length > 0) {
+    lines.push("", labels.infoGoalsTitle);
+    for (const item of content.informatie_doelen) {
+      lines.push(`- ${item.onderwerp}${item.waarom ? ` — ${item.waarom}` : ""}`);
     }
   }
   if (content.voorgestelde_vragen.length > 0) {

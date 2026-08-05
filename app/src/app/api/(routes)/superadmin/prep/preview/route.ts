@@ -62,6 +62,11 @@ export async function POST(req: NextRequest) {
   const calendarEventId =
     body.calendarEventId || `preview-${userId}-${Date.now()}`;
 
+  // Optioneel: extra deelnemers meesturen (test van MAX_ATTENDEES e.d.).
+  const extraAttendees: string[] = Array.isArray(body.attendeeEmails)
+    ? body.attendeeEmails.map((e: unknown) => String(e))
+    : [];
+
   try {
     const result = await prepAnalysisService.generatePrepForMeeting({
       userId,
@@ -69,7 +74,7 @@ export async function POST(req: NextRequest) {
         calendarEventId,
         title: body.meetingTitle || "Preview-meeting",
         startTime: meetingStart,
-        attendeeEmails: [user.email, prospectEmail],
+        attendeeEmails: [user.email, prospectEmail, ...extraAttendees],
         organizerEmail: user.email,
       },
       sendEmail,

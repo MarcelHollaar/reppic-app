@@ -145,7 +145,8 @@
     "retryFailedUploads": "Klik hier om ze opnieuw te uploaden",
     "retryingFailedUploads": "Mislukte uploads opnieuw aan het uploaden...",
     "retryTwinAiUpload": "Gesprek Opnieuw Verzenden",
-    "reUploading": "Opnieuw uploaden, sluit de tablet niet en navigeer niet weg"
+    "reUploading": "Opnieuw uploaden, sluit de tablet niet en navigeer niet weg",
+    "prepareNext": "Bereid volgend gesprek voor"
   },
   "dateRangePicker": {
     "selectDateRange": "Datum bereik selecteren",
@@ -172,7 +173,14 @@
     "lmsTranslationModel": "LMS: vertalingen",
     "lmsEmbeddingsModel": "LMS: bibliotheek-zoeken",
     "integrations": "Integraties",
-    "prepAnalysisPrompt": "Prep-prompt"
+    "prepAnalysisPrompt": "Prep-prompt",
+    "meetingPrepTiming": {
+      "title": "Gespreksvoorbereiding",
+      "description": "Wanneer wil je de automatische voorbereiding voor je klantafspraken ontvangen?",
+      "mode24h": "±24 uur vóór de afspraak (standaard)",
+      "modeMorning": "'s Ochtends — alle afspraken van die dag",
+      "modeCustom": "Aantal uur vóór de afspraak:"
+    }
   },
   "analysisModelSettings": {
     "title": "LiteLLM-model voor gespreksanalyse",
@@ -727,8 +735,6 @@
     "prepIntro": "Hoi {{userName}}, hieronder je voorbereiding van {{appName}} voor je komende afspraak.",
     "prepMeetingAt": "Gepland op",
     "prepGoalTitle": "Doel van dit gesprek",
-    "prepMissedTitle": "Wat miste er vorige keer",
-    "prepResistancesTitle": "Weerstanden om op te letten",
     "prepQuestionsTitle": "Voorgestelde vragen",
     "prepDealTitle": "Dealcontext",
     "prepAttentionTitle": "Aandachtspunten",
@@ -804,7 +810,8 @@
       "watchResistance": "Grootste weerstand: {term} ({n} vermeldingen).",
       "watchCompetitor": "Meest genoemde concurrent: {term} ({n}×).",
       "watchIssue": "Belangrijkste gemelde issue: {term}."
-    }
+    },
+    "prepInfoGoalsTitle": "Waardevolle informatie om op te halen"
   },
   "breadCrumbs": {
     "dashboard": "Dashboard",
@@ -1481,5 +1488,35 @@
     "loading": "Bezig…",
     "loadIntoEditor": "In editor laden",
     "activate": "Activeren"
+  },
+  "meetings": {
+    "title": "Aankomende afspraken",
+    "goalTitle": "Doel van dit gesprek",
+    "infoGoalsTitle": "Waardevolle informatie om op te halen",
+    "questionsTitle": "Voorgestelde vragen",
+    "dealTitle": "Dealcontext",
+    "attentionTitle": "Aandachtspunten",
+    "prepareNow": "Bereid nu voor",
+    "view": "Bekijk",
+    "generating": "Bezig…",
+    "generated": "Voorbereiding gereed.",
+    "existingShown": "Bestaande voorbereiding getoond.",
+    "generateFailed": "Voorbereiden is mislukt.",
+    "loadFailed": "Afspraken laden mislukt.",
+    "empty": "Geen afspraken in de komende 7 dagen.",
+    "untitled": "(geen titel)",
+    "internalOnly": "Alleen interne deelnemers",
+    "noCalendarTitle": "Geen agenda gekoppeld",
+    "noCalendarHint": "Koppel je agenda (dezelfde koppeling als de notetaker) om automatische voorbereidingen te ontvangen.",
+    "statusNone": "Nog geen voorbereiding",
+    "statusPending": "Gepland",
+    "statusGenerated": "Gereed",
+    "statusSent": "Verstuurd",
+    "statusSkipped": "Overgeslagen",
+    "statusFailed": "Mislukt",
+    "skip_no_sources": "Geen context beschikbaar",
+    "skip_no_external_attendees": "Alleen interne deelnemers",
+    "skip_too_many_attendees": "Te veel deelnemers (webinar?)",
+    "skip_no_company": "Geen bedrijf gekoppeld"
   }
 }

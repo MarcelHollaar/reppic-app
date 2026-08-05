@@ -23,6 +23,10 @@ const MAX_FAIL_COUNT = 3;
 // Verplaatste meeting: bij een verschuiving > 48u een al verstuurde prep
 // opnieuw genereren (bouwplan risico 2).
 const RESCHEDULE_RESET_MS = 48 * 60 * 60 * 1000;
+// Webinar-achtige afspraken (veel deelnemers) zijn geen 1-op-1 klantgesprek.
+const MAX_ATTENDEES = 8;
+// Maximaal aantal eerdere gesprekken dat als bron meegaat in de prep.
+const MAX_SOURCE_CONVERSATIONS = 3;
 
 export interface PrepMeetingInput {
   calendarEventId: string;
@@ -49,16 +53,35 @@ interface PhaseEntry {
   [key: string]: unknown;
 }
 
-/** Compact NL-tekstblok van de vorige-gesprek-analyse voor in de prompt. */
-function buildPreviousConversationBlock(summary: {
-  summary_text: string | null;
-  phases: unknown;
-  resistances: unknown;
-  total_score: number | null;
+interface SourceConversation {
+  id: string;
   created_at: Date;
-}): string {
-  const lines: string[] = ["## Analyse van het vorige gesprek met deze klant"];
-  lines.push(`- Datum: ${summary.created_at.toISOString().slice(0, 10)}`);
+  attendee_emails: unknown;
+  user: { id: string; name: string } | null;
+  conversation_summaries_x: Array<{
+    summary_text: string | null;
+    phases: unknown;
+    resistances: unknown;
+    total_score: number | null;
+    created_at: Date;
+    geen_salesgesprek: boolean;
+  }>;
+}
+
+/** Eén gesprek-analyse als compact NL-tekstblok (prompt-INPUT; de output
+ *  van de prep formuleert dit vooruitkijkend — zie prompt.md). */
+function renderConversationSummary(
+  conversation: SourceConversation,
+  recipientUserId: string
+): string {
+  const summary = conversation.conversation_summaries_x[0];
+  const lines: string[] = [];
+  const date = summary.created_at.toISOString().slice(0, 10);
+  const byColleague =
+    conversation.user && conversation.user.id !== recipientUserId
+      ? ` (gesprek gevoerd door ${conversation.user.name})`
+      : "";
+  lines.push(`### Gesprek van ${date}${byColleague}`);
   if (summary.total_score != null) {
     lines.push(`- Totaalscore: ${summary.total_score}`);
   }
@@ -69,18 +92,16 @@ function buildPreviousConversationBlock(summary: {
   const phases = Array.isArray(summary.phases)
     ? (summary.phases as PhaseEntry[])
     : [];
-  // Score-schaal is 0/1/3: 0 = niet behandeld, 1 = onvoldoende.
-  const missed = phases.filter(
+  // Score-schaal is 0/1/3: 0 = niet behandeld, 1 = onvoldoende → nog open.
+  const open = phases.filter(
     (p) => typeof p?.Score === "number" && p.Score <= 1
   );
-  if (missed.length > 0) {
-    lines.push("- Niet of onvoldoende behandelde gespreksfases:");
-    for (const phase of missed) {
+  if (open.length > 0) {
+    lines.push("- Nog openstaande onderwerpen (lage fase-score):");
+    for (const phase of open) {
       const name = phase.Titel || `fase ${phase.Fase ?? "?"}`;
       lines.push(
-        `  - ${name} (score ${phase.Score})${
-          phase.Redenering ? `: ${phase.Redenering}` : ""
-        }`
+        `  - ${name}${phase.Redenering ? `: ${phase.Redenering}` : ""}`
       );
     }
   }
@@ -90,16 +111,71 @@ function buildPreviousConversationBlock(summary: {
     ? (summary.resistances as Array<Record<string, unknown>>)
     : [];
   if (resistances.length > 0) {
-    lines.push("- Waargenomen weerstanden:");
+    lines.push("- Geuite bezwaren/gevoeligheden:");
     for (const r of resistances) {
       const text =
-        (r.KlantWeerstand as string) ||
-        JSON.stringify(r).slice(0, 200);
-      const conclusion = r.Conclusie ? ` (aanpak vorige keer: ${r.Conclusie})` : "";
+        (r.KlantWeerstand as string) || JSON.stringify(r).slice(0, 200);
+      const conclusion = r.Conclusie ? ` (status: ${r.Conclusie})` : "";
       lines.push(`  - ${text}${conclusion}`);
     }
   }
   return lines.join("\n");
+}
+
+/** Multi-gesprek-blok: max N recentste bruikbare gesprekken, bedrijfsbreed
+ *  (ook van collega's, met bronvermelding). */
+function buildPreviousConversationsBlock(
+  conversations: SourceConversation[],
+  recipientUserId: string
+): string {
+  const header =
+    conversations.length === 1
+      ? "## Analyse van het eerdere gesprek met deze klant"
+      : `## Analyses van de ${conversations.length} meest recente gesprekken met deze klant (nieuwste eerst)`;
+  return [
+    header,
+    ...conversations.map((c) => renderConversationSummary(c, recipientUserId)),
+  ].join("\n\n");
+}
+
+/** Filtert bruikbare bron-gesprekken; optioneel gescoopt op de e-mailadressen
+ *  van de contacten van de gevonden HubSpot-deal (per-deal context). */
+function selectSourceConversations(
+  conversations: SourceConversation[],
+  dealContactEmails: string[]
+): { selected: SourceConversation[]; dealScoped: boolean } {
+  const usable = conversations.filter((c) => {
+    const summary = c.conversation_summaries_x[0];
+    return summary && !summary.geen_salesgesprek;
+  });
+
+  if (dealContactEmails.length > 0) {
+    const dealSet = new Set(dealContactEmails);
+    const scoped = usable.filter((c) => {
+      const attendees = Array.isArray(c.attendee_emails)
+        ? (c.attendee_emails as unknown[]).map((e) =>
+            String(e).toLowerCase().trim()
+          )
+        : [];
+      return attendees.some((e) => dealSet.has(e));
+    });
+    if (scoped.length > 0) {
+      return {
+        selected: scoped.slice(0, MAX_SOURCE_CONVERSATIONS),
+        dealScoped: true,
+      };
+    }
+    // Lege doorsnede (CRM-aliassen of oude gesprekken zonder attendees):
+    // stil terugvallen op domein-niveau, wel loggen om te kwantificeren.
+    console.log(
+      "[Prep] Deal-scoping found no overlapping conversations; falling back to domain level."
+    );
+  }
+
+  return {
+    selected: usable.slice(0, MAX_SOURCE_CONVERSATIONS),
+    dealScoped: false,
+  };
 }
 
 async function upsertPrepRow(params: {
@@ -184,6 +260,21 @@ export const prepAnalysisService = {
       }
     }
 
+    // --- Herkenning: webinars/grote sessies zijn geen 1-op-1 klantgesprek ---
+    if (meeting.attendeeEmails.length > MAX_ATTENDEES) {
+      const row = await upsertPrepRow({
+        companyId,
+        userId,
+        meeting,
+        prospectAccountId: null,
+      });
+      await prisma.conversationPrep.update({
+        where: { id: row.id },
+        data: { status: "skipped", skip_reason: "too_many_attendees" },
+      });
+      return { status: "skipped", skipReason: "too_many_attendees" };
+    }
+
     // --- Externe deelnemers + prospect ---
     const externalAttendees = extractExternalAttendees(
       meeting.attendeeEmails,
@@ -217,29 +308,12 @@ export const prepAnalysisService = {
     });
 
     try {
-      // --- Bron 1: vorige gesprek van deze prospect ---
-      let previousBlock: string | null = null;
-      let previousConversationId: string | null = null;
-      if (prospectAccountId) {
-        const conversations =
-          await ProspectAccountService.findConversationsForProspect(
-            prospectAccountId
-          );
-        for (const conversation of conversations) {
-          const summary = conversation.conversation_summaries_x?.[0];
-          // geen_salesgesprek-analyses nooit als bron gebruiken (bouwplan).
-          if (summary && !summary.geen_salesgesprek) {
-            previousBlock = buildPreviousConversationBlock(summary);
-            previousConversationId = conversation.id;
-            break;
-          }
-        }
-      }
-
-      // --- Bron 2: HubSpot-context (eerste extern adres met een match) ---
+      // --- Bron 1: HubSpot-context (eerst, want de deal stuurt de scoping) ---
       let crmBlock: string | null = null;
       let hubspotDealId: string | null = null;
+      let hubspotCompanyId: string | null = null;
       let prospectDisplayName: string | null = null;
+      let dealContactEmails: string[] = [];
       try {
         for (const email of externalAttendees.slice(0, 3)) {
           const context = await HubspotService.findCrmContextByEmail(
@@ -249,6 +323,7 @@ export const prepAnalysisService = {
           if (context) {
             crmBlock = HubspotService.buildCrmContextBlock(context);
             hubspotDealId = context.deal?.id ?? null;
+            hubspotCompanyId = context.company?.id ?? null;
             prospectDisplayName =
               context.company?.name ||
               [context.contact?.firstName, context.contact?.lastName]
@@ -258,10 +333,53 @@ export const prepAnalysisService = {
             break;
           }
         }
+        // Per-deal scoping: de contacten van de deal bepalen welke eerdere
+        // gesprekken relevant zijn (i.p.v. alles op klant-domein).
+        if (hubspotDealId) {
+          dealContactEmails = await HubspotService.getDealContactEmails(
+            companyId,
+            hubspotDealId
+          );
+        }
       } catch (error) {
         // CRM-context is verrijking; nooit de prep laten falen op HubSpot.
         console.error("[Prep] HubSpot context failed (non-fatal):", error);
       }
+
+      // HubSpot-company-id op de prospect vastleggen zodra bekend
+      // (bestaand veld; maakt latere koppelingen betrouwbaarder).
+      if (prospectAccountId && hubspotCompanyId) {
+        prisma.prospectAccount
+          .update({
+            where: { id: prospectAccountId },
+            data: { hubspot_company_id: hubspotCompanyId },
+          })
+          .catch(() => {});
+      }
+
+      // --- Bron 2: eerdere gesprekken (bedrijfsbreed; deal-gescoopt indien mogelijk) ---
+      let previousBlock: string | null = null;
+      let sourceConversationIds: string[] = [];
+      if (prospectAccountId) {
+        const conversations =
+          (await ProspectAccountService.findConversationsForProspect(
+            prospectAccountId
+          )) as unknown as SourceConversation[];
+        const { selected, dealScoped } = selectSourceConversations(
+          conversations,
+          dealContactEmails
+        );
+        if (selected.length > 0) {
+          previousBlock = buildPreviousConversationsBlock(selected, userId);
+          sourceConversationIds = selected.map((c) => c.id);
+          if (dealScoped) {
+            console.log(
+              `[Prep] Deal-scoped sources: ${selected.length} conversation(s) for deal ${hubspotDealId}`
+            );
+          }
+        }
+      }
+      const previousConversationId = sourceConversationIds[0] ?? null;
 
       // --- Fallback-matrix ---
       if (!previousBlock && !crmBlock) {
@@ -282,7 +400,7 @@ export const prepAnalysisService = {
       const contextBlock = [
         meetingBlock,
         previousBlock ??
-          "## Analyse van het vorige gesprek\n(Geen eerder geanalyseerd gesprek met deze klant beschikbaar.)",
+          "## Analyses van eerdere gesprekken\n(Geen eerder geanalyseerd gesprek met deze klant beschikbaar.)",
         crmBlock ??
           "## CRM-context (HubSpot)\n(Geen CRM-context beschikbaar.)",
       ].join("\n\n");
@@ -317,9 +435,7 @@ export const prepAnalysisService = {
           content: content as object,
           hubspot_deal_id: hubspotDealId,
           prospect_account_id: prospectAccountId,
-          source_conversation_ids: previousConversationId
-            ? [previousConversationId]
-            : [],
+          source_conversation_ids: sourceConversationIds,
         },
       });
 

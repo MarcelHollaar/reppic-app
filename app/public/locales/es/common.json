@@ -145,7 +145,8 @@
     "retryFailedUploads": "Haz clic aquí para volver a subirlas",
     "retryingFailedUploads": "Reintentando cargas fallidas...",
     "retryTwinAiUpload": "Reenviar conversación",
-    "reUploading": "Re-subiendo, por favor no cierre la tableta ni cambie de página"
+    "reUploading": "Re-subiendo, por favor no cierre la tableta ni cambie de página",
+    "prepareNext": "Preparar la próxima reunión"
   },
   "dateRangePicker": {
     "selectDateRange": "Seleccionar rango de fechas",
@@ -171,7 +172,14 @@
     "lmsTranslationModel": "LMS: traducciones",
     "lmsEmbeddingsModel": "LMS: búsqueda biblioteca",
     "integrations": "Integraciones",
-    "prepAnalysisPrompt": "Prompt de preparación"
+    "prepAnalysisPrompt": "Prompt de preparación",
+    "meetingPrepTiming": {
+      "title": "Preparación de reuniones",
+      "description": "¿Cuándo quieres recibir la preparación automática de tus reuniones con clientes?",
+      "mode24h": "±24 horas antes de la reunión (predeterminado)",
+      "modeMorning": "Por la mañana — todas las reuniones del día",
+      "modeCustom": "Horas antes de la reunión:"
+    }
   },
   "form": {
     "firstName": "Nombre",
@@ -675,8 +683,6 @@
     "prepIntro": "Hola {{userName}}, aquí tienes tu preparación de {{appName}} para tu próxima reunión.",
     "prepMeetingAt": "Programada para",
     "prepGoalTitle": "Objetivo de esta reunión",
-    "prepMissedTitle": "Qué faltó la última vez",
-    "prepResistancesTitle": "Objeciones a tener en cuenta",
     "prepQuestionsTitle": "Preguntas sugeridas",
     "prepDealTitle": "Contexto del negocio",
     "prepAttentionTitle": "Puntos de atención",
@@ -752,7 +758,8 @@
       "watchResistance": "Mayor resistencia: {term} ({n} menciones).",
       "watchCompetitor": "Competidor más mencionado: {term} ({n}×).",
       "watchIssue": "Principal problema reportado: {term}."
-    }
+    },
+    "prepInfoGoalsTitle": "Información valiosa por descubrir"
   },
   "breadCrumbs": {
     "dashboard": "Panel",
@@ -1435,5 +1442,35 @@
     "loading": "Cargando…",
     "loadIntoEditor": "Cargar en el editor",
     "activate": "Activar"
+  },
+  "meetings": {
+    "title": "Próximas reuniones",
+    "goalTitle": "Objetivo de esta reunión",
+    "infoGoalsTitle": "Información valiosa por descubrir",
+    "questionsTitle": "Preguntas sugeridas",
+    "dealTitle": "Contexto del negocio",
+    "attentionTitle": "Puntos de atención",
+    "prepareNow": "Preparar ahora",
+    "view": "Ver",
+    "generating": "En curso…",
+    "generated": "Preparación lista.",
+    "existingShown": "Se muestra la preparación existente.",
+    "generateFailed": "Error al preparar.",
+    "loadFailed": "Error al cargar las reuniones.",
+    "empty": "Sin reuniones en los próximos 7 días.",
+    "untitled": "(sin título)",
+    "internalOnly": "Solo participantes internos",
+    "noCalendarTitle": "Sin agenda conectada",
+    "noCalendarHint": "Conecta tu agenda (la misma conexión que el notetaker) para recibir preparaciones automáticas.",
+    "statusNone": "Aún sin preparación",
+    "statusPending": "Programada",
+    "statusGenerated": "Lista",
+    "statusSent": "Enviada",
+    "statusSkipped": "Omitida",
+    "statusFailed": "Fallida",
+    "skip_no_sources": "Sin contexto disponible",
+    "skip_no_external_attendees": "Solo participantes internos",
+    "skip_too_many_attendees": "Demasiados participantes (¿webinar?)",
+    "skip_no_company": "Sin empresa vinculada"
   }
 }

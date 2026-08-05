@@ -46,6 +46,11 @@ const NotificationSettings = () => {
   };
 
   const [settings, setSettings] = useState(defaultSettings);
+  // Gespreksvoorbereiding: wanneer wil deze verkoper de prep-mail ontvangen?
+  const [meetingPrep, setMeetingPrep] = useState<{
+    mode: "24h" | "morning" | "custom";
+    hoursBefore: number;
+  }>({ mode: "24h", hoursBefore: 4 });
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingData, setIsSavingData] = useState(false);
 
@@ -83,6 +88,20 @@ const NotificationSettings = () => {
       });
 
       setSettings(mergedSettings);
+
+      // Timing-voorkeur gespreksvoorbereiding (aparte shape, eigen sectie).
+      const prep = userSettings.meetingPrep;
+      if (prep && typeof prep === "object") {
+        setMeetingPrep({
+          mode:
+            prep.mode === "morning" || prep.mode === "custom"
+              ? prep.mode
+              : "24h",
+          hoursBefore: Number.isFinite(Number(prep.hoursBefore))
+            ? Math.min(72, Math.max(1, Math.round(Number(prep.hoursBefore))))
+            : 4,
+        });
+      }
     } catch (error) {
       toast.error(t("errorMessages.errorFetchingNotifications"));
       console.error(error);
@@ -114,6 +133,16 @@ const NotificationSettings = () => {
           ),
         ])
       );
+
+      // Timing gespreksvoorbereiding meesturen; tijdzone van de browser zodat
+      // de "ochtend"-mode server-side in de juiste zone rekent.
+      (cleanedSettings as Record<string, unknown>).meetingPrep = {
+        mode: meetingPrep.mode,
+        ...(meetingPrep.mode === "custom"
+          ? { hoursBefore: meetingPrep.hoursBefore }
+          : {}),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      };
 
       const payload = {
         type: "UPDATE_USER_PREFERENCES",
@@ -200,6 +229,67 @@ const NotificationSettings = () => {
               </div>
             </div>
           ))}
+        </div>
+
+        <hr className="tw-my-4" />
+
+        {/* Gespreksvoorbereiding: timing per verkoper */}
+        <div className="tw-py-2">
+          <h3 className="tw-font-medium tw-text-sm tw-text-[#000000] tw-font-[system-ui]">
+            {t("settings.meetingPrepTiming.title")}
+          </h3>
+          <p className="tw-text-sm !tw-font-normal tw-text-[#667085] tw-font-[system-ui] tw-mb-3">
+            {t("settings.meetingPrepTiming.description")}
+          </p>
+          <div className="tw-flex tw-flex-col tw-gap-2">
+            {(
+              [
+                { value: "24h", label: t("settings.meetingPrepTiming.mode24h") },
+                {
+                  value: "morning",
+                  label: t("settings.meetingPrepTiming.modeMorning"),
+                },
+                {
+                  value: "custom",
+                  label: t("settings.meetingPrepTiming.modeCustom"),
+                },
+              ] as const
+            ).map((option) => (
+              <label
+                key={option.value}
+                className="tw-flex tw-items-center tw-gap-2 tw-text-sm tw-text-[#344054] tw-font-[system-ui] tw-cursor-pointer"
+              >
+                <input
+                  type="radio"
+                  name="meeting-prep-mode"
+                  checked={meetingPrep.mode === option.value}
+                  onChange={() =>
+                    setMeetingPrep((prev) => ({ ...prev, mode: option.value }))
+                  }
+                  className="tw-accent-[#5971F6]"
+                />
+                {option.label}
+                {option.value === "custom" && meetingPrep.mode === "custom" && (
+                  <input
+                    type="number"
+                    min={1}
+                    max={72}
+                    value={meetingPrep.hoursBefore}
+                    onChange={(e) =>
+                      setMeetingPrep((prev) => ({
+                        ...prev,
+                        hoursBefore: Math.min(
+                          72,
+                          Math.max(1, Math.round(Number(e.target.value) || 1))
+                        ),
+                      }))
+                    }
+                    className="tw-w-16 tw-border tw-border-[#D0D5DD] tw-rounded-lg tw-px-2 tw-py-1 tw-text-sm"
+                  />
+                )}
+              </label>
+            ))}
+          </div>
         </div>
 
         <hr className="tw-my-4" />

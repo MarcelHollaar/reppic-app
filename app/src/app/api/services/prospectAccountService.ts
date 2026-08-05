@@ -69,7 +69,7 @@ export class ProspectAccountService {
    */
   static async findConversationsForProspect(
     prospectAccountId: string,
-    limit: number = 5
+    limit: number = 15
   ) {
     return prisma.userConversation.findMany({
       where: { prospect_account_id: prospectAccountId },
@@ -80,6 +80,9 @@ export class ProspectAccountService {
           orderBy: { created_at: "desc" },
           take: 1,
         },
+        // Bedrijfsbreed delen: naam van de voerende collega voor de
+        // bronvermelding in de prep ("gesprek gevoerd door …").
+        user: { select: { id: true, name: true } },
       },
     });
   }

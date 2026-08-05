@@ -106,6 +106,17 @@ export const buildRoutes = ({
     external: false,
   });
 
+  // Gespreksvoorbereiding: aankomende afspraken + handmatige prep-knop.
+  routes.push({
+    name: t("meetings.title"),
+    icon: <img src="/img/ballot.svg" alt="Meetings" className="w-5 h-5" />,
+    iconBlack: (
+      <img src="/img/ballot_dark.svg" alt="Meetings" className="w-5 h-5" />
+    ),
+    path: "/meetings",
+    external: false,
+  });
+
   routes.push({
     name: "Sales Coach",
     icon: (

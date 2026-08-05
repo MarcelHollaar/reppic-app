@@ -145,7 +145,8 @@
     "retryFailedUploads": "Click here to reupload them again",
     "retryingFailedUploads": "Retrying failed uploads...",
     "retryTwinAiUpload": "Retry Sending Conversation",
-    "reUploading": "Re-uploading, please don't close tablet or navigate away"
+    "reUploading": "Re-uploading, please don't close tablet or navigate away",
+    "prepareNext": "Prepare next meeting"
   },
   "dateRangePicker": {
     "selectDateRange": "Select date range",
@@ -172,7 +173,14 @@
     "lmsTranslationModel": "LMS: translations",
     "lmsEmbeddingsModel": "LMS: library search",
     "integrations": "Integrations",
-    "prepAnalysisPrompt": "Prep prompt"
+    "prepAnalysisPrompt": "Prep prompt",
+    "meetingPrepTiming": {
+      "title": "Meeting preparation",
+      "description": "When would you like to receive the automatic preparation for your customer meetings?",
+      "mode24h": "±24 hours before the meeting (default)",
+      "modeMorning": "In the morning — all meetings of that day",
+      "modeCustom": "Hours before the meeting:"
+    }
   },
   "analysisModelSettings": {
     "title": "Conversation analysis model",
@@ -727,8 +735,6 @@
     "prepIntro": "Hi {{userName}}, here is your preparation from {{appName}} for your upcoming meeting.",
     "prepMeetingAt": "Scheduled for",
     "prepGoalTitle": "Goal of this meeting",
-    "prepMissedTitle": "What was missing last time",
-    "prepResistancesTitle": "Objections to watch for",
     "prepQuestionsTitle": "Suggested questions",
     "prepDealTitle": "Deal context",
     "prepAttentionTitle": "Points of attention",
@@ -804,7 +810,8 @@
       "watchResistance": "Top resistance: {term} ({n} mentions).",
       "watchCompetitor": "Most-mentioned competitor: {term} ({n}×).",
       "watchIssue": "Main reported issue: {term}."
-    }
+    },
+    "prepInfoGoalsTitle": "Valuable information to uncover"
   },
   "breadCrumbs": {
     "dashboard": "Dashboard",
@@ -1482,5 +1489,35 @@
     "loading": "Loading…",
     "loadIntoEditor": "Load into editor",
     "activate": "Activate"
+  },
+  "meetings": {
+    "title": "Upcoming meetings",
+    "goalTitle": "Goal of this meeting",
+    "infoGoalsTitle": "Valuable information to uncover",
+    "questionsTitle": "Suggested questions",
+    "dealTitle": "Deal context",
+    "attentionTitle": "Points of attention",
+    "prepareNow": "Prepare now",
+    "view": "View",
+    "generating": "Working…",
+    "generated": "Preparation ready.",
+    "existingShown": "Existing preparation shown.",
+    "generateFailed": "Preparation failed.",
+    "loadFailed": "Failed to load meetings.",
+    "empty": "No meetings in the next 7 days.",
+    "untitled": "(untitled)",
+    "internalOnly": "Internal attendees only",
+    "noCalendarTitle": "No calendar connected",
+    "noCalendarHint": "Connect your calendar (same connection as the notetaker) to receive automatic preparations.",
+    "statusNone": "No preparation yet",
+    "statusPending": "Scheduled",
+    "statusGenerated": "Ready",
+    "statusSent": "Sent",
+    "statusSkipped": "Skipped",
+    "statusFailed": "Failed",
+    "skip_no_sources": "No context available",
+    "skip_no_external_attendees": "Internal attendees only",
+    "skip_too_many_attendees": "Too many attendees (webinar?)",
+    "skip_no_company": "No company linked"
   }
 }

@@ -426,6 +426,43 @@ export class HubspotService {
     return context;
   }
 
+  /**
+   * E-mailadressen van alle contacten die aan een deal hangen (per-deal
+   * scoping van de gespreksvoorbereiding: deal → contacten → gesprekken).
+   * Lowercase + gededupliceerd. Lege array bij fouten — scoping is
+   * verrijking en mag de prep nooit laten falen.
+   */
+  static async getDealContactEmails(
+    companyId: string,
+    dealId: string
+  ): Promise<string[]> {
+    try {
+      const token = await this.getValidAccessToken(companyId);
+      if (!token) return [];
+
+      const assoc = await this.apiGet(
+        token,
+        `/crm/v4/objects/deals/${dealId}/associations/contacts?limit=100`
+      );
+      const contactIds: string[] = (assoc?.results ?? []).map((r: any) =>
+        String(r.toObjectId)
+      );
+      if (contactIds.length === 0) return [];
+
+      const batch = await this.apiPost(token, "/crm/v3/objects/contacts/batch/read", {
+        inputs: contactIds.slice(0, 100).map((id) => ({ id })),
+        properties: ["email"],
+      });
+      const emails = (batch?.results ?? [])
+        .map((c: any) => String(c.properties?.email ?? "").toLowerCase().trim())
+        .filter((e: string) => e.includes("@"));
+      return [...new Set(emails)] as string[];
+    } catch (error) {
+      console.warn("[HubSpot] Deal contact emails failed (non-fatal):", error);
+      return [];
+    }
+  }
+
   /** Compact Nederlands tekstblok met CRM-context voor in de prep-prompt. */
   static buildCrmContextBlock(context: HubspotCrmContext): string {
     const lines: string[] = ["## CRM-context (HubSpot)"];

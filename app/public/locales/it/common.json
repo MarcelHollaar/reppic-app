@@ -145,7 +145,8 @@
     "retryFailedUploads": "Clicca qui per ricaricarli",
     "retryingFailedUploads": "Ritento dei caricamenti non riusciti...",
     "retryTwinAiUpload": "Reinvia conversazione",
-    "reUploading": "Ricaricamento in corso, non chiudere il tablet né lasciare la pagina"
+    "reUploading": "Ricaricamento in corso, non chiudere il tablet né lasciare la pagina",
+    "prepareNext": "Prepara il prossimo incontro"
   },
   "dateRangePicker": {
     "selectDateRange": "Seleziona intervallo di date",
@@ -171,7 +172,14 @@
     "lmsTranslationModel": "LMS: traduzioni",
     "lmsEmbeddingsModel": "LMS: ricerca libreria",
     "integrations": "Integrazioni",
-    "prepAnalysisPrompt": "Prompt di preparazione"
+    "prepAnalysisPrompt": "Prompt di preparazione",
+    "meetingPrepTiming": {
+      "title": "Preparazione degli incontri",
+      "description": "Quando vuoi ricevere la preparazione automatica per i tuoi appuntamenti con i clienti?",
+      "mode24h": "±24 ore prima dell'appuntamento (predefinito)",
+      "modeMorning": "Al mattino — tutti gli appuntamenti della giornata",
+      "modeCustom": "Ore prima dell'appuntamento:"
+    }
   },
   "form": {
     "firstName": "Nome",
@@ -675,8 +683,6 @@
     "prepIntro": "Ciao {{userName}}, ecco la tua preparazione da {{appName}} per il prossimo incontro.",
     "prepMeetingAt": "In programma per",
     "prepGoalTitle": "Obiettivo di questo incontro",
-    "prepMissedTitle": "Cosa mancava l'ultima volta",
-    "prepResistancesTitle": "Obiezioni da tenere d'occhio",
     "prepQuestionsTitle": "Domande suggerite",
     "prepDealTitle": "Contesto della trattativa",
     "prepAttentionTitle": "Punti di attenzione",
@@ -752,7 +758,8 @@
       "watchResistance": "Resistenza principale: {term} ({n} menzioni).",
       "watchCompetitor": "Concorrente più citato: {term} ({n}×).",
       "watchIssue": "Problema principale segnalato: {term}."
-    }
+    },
+    "prepInfoGoalsTitle": "Informazioni preziose da raccogliere"
   },
   "breadCrumbs": {
     "dashboard": "Pannello di controllo",
@@ -1435,5 +1442,35 @@
     "loading": "Caricamento…",
     "loadIntoEditor": "Carica nell'editor",
     "activate": "Attiva"
+  },
+  "meetings": {
+    "title": "Prossimi appuntamenti",
+    "goalTitle": "Obiettivo di questo incontro",
+    "infoGoalsTitle": "Informazioni preziose da raccogliere",
+    "questionsTitle": "Domande suggerite",
+    "dealTitle": "Contesto della trattativa",
+    "attentionTitle": "Punti di attenzione",
+    "prepareNow": "Prepara ora",
+    "view": "Vedi",
+    "generating": "In corso…",
+    "generated": "Preparazione pronta.",
+    "existingShown": "Preparazione esistente mostrata.",
+    "generateFailed": "Preparazione non riuscita.",
+    "loadFailed": "Caricamento appuntamenti non riuscito.",
+    "empty": "Nessun appuntamento nei prossimi 7 giorni.",
+    "untitled": "(senza titolo)",
+    "internalOnly": "Solo partecipanti interni",
+    "noCalendarTitle": "Nessuna agenda collegata",
+    "noCalendarHint": "Collega la tua agenda (stessa connessione del notetaker) per ricevere preparazioni automatiche.",
+    "statusNone": "Ancora nessuna preparazione",
+    "statusPending": "Pianificata",
+    "statusGenerated": "Pronta",
+    "statusSent": "Inviata",
+    "statusSkipped": "Saltata",
+    "statusFailed": "Non riuscita",
+    "skip_no_sources": "Nessun contesto disponibile",
+    "skip_no_external_attendees": "Solo partecipanti interni",
+    "skip_too_many_attendees": "Troppi partecipanti (webinar?)",
+    "skip_no_company": "Nessuna azienda collegata"
   }
 }

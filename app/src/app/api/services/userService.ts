@@ -436,11 +436,16 @@ export const UserService = {
           },
         });
       } else {
-        // Update existing settings
+        // Shallow-merge met de bestaande JSON i.p.v. volledig vervangen:
+        // voorkomt dat een oudere client onbekende voorkeuren (bijv.
+        // meetingPrep van de gespreksvoorbereiding) wegschrijft.
+        const existing =
+          (userSettings.notification_setting as Record<string, unknown>) ?? {};
+        const merged = { ...existing, ...(preferences ?? {}) };
         userSettings = await prisma.userSetting.update({
           where: { id: userSettings.id },
           data: {
-            notification_setting: preferences,
+            notification_setting: merged,
           },
         });
       }

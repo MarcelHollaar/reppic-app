@@ -145,7 +145,8 @@
     "retryFailedUploads": "Klicken Sie hier, um sie erneut hochzuladen",
     "retryingFailedUploads": "Fehlgeschlagene Uploads werden erneut hochgeladen...",
     "retryTwinAiUpload": "Gespräch erneut senden",
-    "reUploading": "Wird erneut hochgeladen, bitte Tablet nicht schließen oder die Seite verlassen"
+    "reUploading": "Wird erneut hochgeladen, bitte Tablet nicht schließen oder die Seite verlassen",
+    "prepareNext": "Nächstes Gespräch vorbereiten"
   },
   "dateRangePicker": {
     "selectDateRange": "Datumsbereich auswählen",
@@ -171,7 +172,14 @@
     "lmsTranslationModel": "LMS: Übersetzungen",
     "lmsEmbeddingsModel": "LMS: Bibliothekssuche",
     "integrations": "Integrationen",
-    "prepAnalysisPrompt": "Prep-Prompt"
+    "prepAnalysisPrompt": "Prep-Prompt",
+    "meetingPrepTiming": {
+      "title": "Gesprächsvorbereitung",
+      "description": "Wann möchtest du die automatische Vorbereitung für deine Kundentermine erhalten?",
+      "mode24h": "±24 Stunden vor dem Termin (Standard)",
+      "modeMorning": "Morgens — alle Termine des Tages",
+      "modeCustom": "Stunden vor dem Termin:"
+    }
   },
   "form": {
     "firstName": "Vorname",
@@ -680,8 +688,6 @@
     "prepIntro": "Hallo {{userName}}, hier ist Ihre Vorbereitung von {{appName}} für Ihren kommenden Termin.",
     "prepMeetingAt": "Geplant für",
     "prepGoalTitle": "Ziel dieses Gesprächs",
-    "prepMissedTitle": "Was beim letzten Mal fehlte",
-    "prepResistancesTitle": "Einwände, auf die Sie achten sollten",
     "prepQuestionsTitle": "Vorgeschlagene Fragen",
     "prepDealTitle": "Deal-Kontext",
     "prepAttentionTitle": "Zu beachten",
@@ -757,7 +763,8 @@
       "watchResistance": "Größter Widerstand: {term} ({n} Nennungen).",
       "watchCompetitor": "Meistgenannter Wettbewerber: {term} ({n}×).",
       "watchIssue": "Wichtigstes gemeldetes Problem: {term}."
-    }
+    },
+    "prepInfoGoalsTitle": "Wertvolle Informationen, die es zu gewinnen gilt"
   },
   "breadCrumbs": {
     "dashboard": "Dashboard",
@@ -1445,5 +1452,35 @@
     "loading": "Lädt…",
     "loadIntoEditor": "In Editor laden",
     "activate": "Aktivieren"
+  },
+  "meetings": {
+    "title": "Anstehende Termine",
+    "goalTitle": "Ziel dieses Gesprächs",
+    "infoGoalsTitle": "Wertvolle Informationen, die es zu gewinnen gilt",
+    "questionsTitle": "Vorgeschlagene Fragen",
+    "dealTitle": "Deal-Kontext",
+    "attentionTitle": "Zu beachten",
+    "prepareNow": "Jetzt vorbereiten",
+    "view": "Ansehen",
+    "generating": "Läuft…",
+    "generated": "Vorbereitung fertig.",
+    "existingShown": "Bestehende Vorbereitung angezeigt.",
+    "generateFailed": "Vorbereitung fehlgeschlagen.",
+    "loadFailed": "Termine konnten nicht geladen werden.",
+    "empty": "Keine Termine in den nächsten 7 Tagen.",
+    "untitled": "(ohne Titel)",
+    "internalOnly": "Nur interne Teilnehmer",
+    "noCalendarTitle": "Kein Kalender verbunden",
+    "noCalendarHint": "Verbinde deinen Kalender (dieselbe Verbindung wie der Notetaker), um automatische Vorbereitungen zu erhalten.",
+    "statusNone": "Noch keine Vorbereitung",
+    "statusPending": "Geplant",
+    "statusGenerated": "Fertig",
+    "statusSent": "Versendet",
+    "statusSkipped": "Übersprungen",
+    "statusFailed": "Fehlgeschlagen",
+    "skip_no_sources": "Kein Kontext verfügbar",
+    "skip_no_external_attendees": "Nur interne Teilnehmer",
+    "skip_too_many_attendees": "Zu viele Teilnehmer (Webinar?)",
+    "skip_no_company": "Kein Unternehmen verknüpft"
   }
 }
