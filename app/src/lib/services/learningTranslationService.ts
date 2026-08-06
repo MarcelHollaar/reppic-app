@@ -32,6 +32,10 @@ type TranslatedContent = {
   title: string;
   description: string;
   questions: { question: string; options: string[]; explanation: string | null }[];
+  // Per-taal media (1-op-1 met productie: translations type module_video /
+  // module_thumbnail): een Duitse gebruiker krijgt de Dúítse Synthesia-video.
+  videoCode?: string;
+  thumbnailUrl?: string;
 };
 
 type Result<T> = { data: T } | { error: "forbidden" | "not_found" | "invalid" };
@@ -233,6 +237,10 @@ ${JSON.stringify(source)}`;
       ...learningModule,
       title: content.title || learningModule.title,
       description: content.description || learningModule.description,
+      // Per-taal video/thumbnail (indien aanwezig in de vertaling) — anders
+      // blijft de basistaal-versie staan.
+      ...(content.videoCode ? { video_embed_code: content.videoCode } : {}),
+      ...(content.thumbnailUrl ? { thumbnail_url: content.thumbnailUrl } : {}),
       ...(localizedQuestions ? { questions: localizedQuestions } : {}),
     };
   },

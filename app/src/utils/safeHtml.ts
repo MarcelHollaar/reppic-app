@@ -75,7 +75,10 @@ const ALLOWED_EMBED_HOSTS = [
 export function extractSafeEmbedUrl(input: unknown): string | null {
   const html = String(input ?? "");
   const iframe = /<iframe\b[^>]*\bsrc\s*=\s*("([^"]*)"|'([^']*)')/i.exec(html);
-  const raw = iframe?.[2] ?? iframe?.[3];
+  // Geen iframe? Dan mag het veld ook een kale URL zijn (productie bewaart
+  // document-/presentatiemodules als pad naar de PDF; de import herschrijft
+  // dat naar een volledige DAM-URL).
+  const raw = iframe?.[2] ?? iframe?.[3] ?? (html.includes("<") ? null : html);
   if (!raw) return null;
   let url: URL;
   try {
@@ -85,8 +88,17 @@ export function extractSafeEmbedUrl(input: unknown): string | null {
   }
   if (url.protocol !== "https:") return null;
   const host = url.hostname.toLowerCase();
-  const ok = ALLOWED_EMBED_HOSTS.some(
-    (h) => host === h || host.endsWith(`.${h}`),
-  );
+  // Eigen DAM (waar PDF's/presentaties staan) is ook vertrouwd.
+  const damHost = (() => {
+    try {
+      const base = process.env.NEXT_PUBLIC_FTP_PUBLIC_URL;
+      return base ? new URL(base).hostname.toLowerCase() : null;
+    } catch {
+      return null;
+    }
+  })();
+  const ok =
+    (damHost && host === damHost) ||
+    ALLOWED_EMBED_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
   return ok ? url.toString() : null;
 }
