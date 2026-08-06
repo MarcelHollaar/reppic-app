@@ -6,6 +6,7 @@ import TranscriptAnalysisPromptComponent from "@/components/settings/TranscriptA
 import LmsChatModelComponent from "@/components/settings/LmsChatModelComponent";
 import LmsEmbeddingsModelComponent from "@/components/settings/LmsEmbeddingsModelComponent";
 import HubspotConnectionComponent from "@/components/settings/HubspotConnectionComponent";
+import CalendarConnectionComponent from "@/components/settings/CalendarConnectionComponent";
 import PrepAnalysisPromptComponent from "@/components/settings/PrepAnalysisPromptComponent";
 import LanguageSettings from "@/components/settings/LanguageComponent";
 import NotificationSettings from "@/components/settings/NotificationComponent";
@@ -19,7 +20,13 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 function SettingsPage() {
-  const [activeTab, setActiveTab] = useState("account");
+  // Honoreer ?tab=… zodat andere pagina's kunnen deep-linken (bv. de
+  // "koppel je agenda"-knop op /meetings → ?tab=calendar).
+  const initialTab =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("tab") || "account"
+      : "account";
+  const [activeTab, setActiveTab] = useState(initialTab);
   const userRole = useUserRole();
   const [roleLoaded, setRoleLoaded] = React.useState(false);
   const { t } = useTranslation("common");
@@ -135,6 +142,13 @@ function SettingsPage() {
       label: t("settings.languages"),
       value: "languages",
       component: <LanguageSettings />,
+    },
+    // Agenda-koppeling: per verkoper (elke rol), anders dan de per-company
+    // HubSpot-kaart die in de manager+/superadmin-integrations-tab blijft.
+    {
+      label: t("calendar.tab"),
+      value: "calendar",
+      component: <CalendarConnectionComponent />,
     },
     ...dynamicTabs,
   ];

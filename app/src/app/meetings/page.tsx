@@ -182,9 +182,15 @@ function MeetingsPage() {
           <p className="tw-text-gray-700 tw-font-medium tw-mb-1">
             {t("meetings.noCalendarTitle")}
           </p>
-          <p className="tw-text-sm tw-text-gray-500">
+          <p className="tw-text-sm tw-text-gray-500 tw-mb-4">
             {t("meetings.noCalendarHint")}
           </p>
+          <a
+            href="/settings?tab=calendar"
+            className="tw-inline-block tw-bg-button tw-text-white tw-py-2 tw-px-5 tw-rounded-lg tw-text-sm"
+          >
+            {t("meetings.connectCalendarCta")}
+          </a>
         </div>
       ) : meetings.length === 0 ? (
         <div className="tw-bg-white tw-rounded-2xl tw-p-8 tw-text-center tw-shadow-sm">
