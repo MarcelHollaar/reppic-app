@@ -449,8 +449,44 @@ export const learningService = {
         include: { module: { select: { id: true, title: true } } },
         orderBy: { completed_at: "desc" },
       }),
-      prisma.userModuleAssignment.count({ where: { user_id: userId } }),
+      prisma.userModuleAssignment.findMany({
+        where: { user_id: userId },
+        include: {
+          module: {
+            select: {
+              id: true,
+              title: true,
+              learning_path_type: true,
+              phase: true,
+              duration: true,
+            },
+          },
+        },
+        orderBy: { assigned_at: "desc" },
+      }),
     ]);
+
+    // "Mijn modules" = gestarte modules + toegewezen-maar-nog-niet-gestarte
+    // (die laatste als 'not_started', zodat een learner ziet wat hij MOET doen,
+    // ook als hij er nog niet aan begon).
+    const startedModuleIds = new Set(progress.map((p) => p.module_id));
+    const assignedNotStarted = assignments
+      .filter((a) => !startedModuleIds.has(a.module_id))
+      .map((a) => ({
+        id: `assigned-${a.id}`,
+        user_id: userId,
+        module_id: a.module_id,
+        status: "not_started" as const,
+        progress: 0,
+        score: null as number | null,
+        answers: null,
+        time_spent: 0,
+        started_at: null as Date | null,
+        completed_at: null as Date | null,
+        last_accessed_at: a.assigned_at,
+        module: a.module,
+      }));
+    const allProgress: any[] = [...progress, ...assignedNotStarted];
 
     const completed = progress.filter((p) => p.status === "completed").length;
     const inProgress = progress.filter((p) => p.status === "in_progress").length;
@@ -462,7 +498,7 @@ export const learningService = {
     if (lang) {
       const moduleIds = [
         ...new Set([
-          ...progress.map((p) => p.module.id),
+          ...allProgress.map((p) => p.module.id),
           ...certificates.map((c) => c.module.id),
         ]),
       ];
@@ -479,7 +515,7 @@ export const learningService = {
             ])
             .filter((e): e is [string, string] => Boolean(e[1])),
         );
-        for (const p of progress) {
+        for (const p of allProgress) {
           const tr = titleByModule.get(p.module.id);
           if (tr) p.module.title = tr;
         }
@@ -495,11 +531,11 @@ export const learningService = {
       stats: {
         completed,
         in_progress: inProgress,
-        assigned: assignments,
+        assigned: assignments.length,
         total_time_minutes: totalTime,
         certificates: certificates.length,
       },
-      progress,
+      progress: allProgress,
       certificates,
     };
   },

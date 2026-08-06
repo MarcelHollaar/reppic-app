@@ -39,6 +39,16 @@ meteen de belangrijkste waarschuwing (zie §4).
 
 Daarna werkt alles: agenda koppelen, prep, en de disclaimer (§5) verschijnt vanzelf.
 
+### Secrets? Voor de agenda-koppeling: GEEN nieuwe.
+- `GOOGLE_OAUTH_CLIENT_ID` en `MICROSOFT_OAUTH_CLIENT_ID` zijn **publieke** client-ID's
+  (staan sowieso in de OAuth-URL) — **geen secret**, gewoon invullen, geen veilige
+  opslag nodig. `NOTETAKER_EMAIL` is optioneel en gewoon een e-mailadres.
+- De **client-secret** van Google/Microsoft hoeft je NIET te genereren of te
+  bewaren: die staat al in het **Recall-dashboard** (zie §3/§7).
+- **Enige echte secrets** (en die komen van de eerdere gespreksvoorbereiding/HubSpot,
+  niet van dit agenda-werk): `ENCRYPTION_KEY` (`openssl rand -base64 32`) en
+  `HUBSPOT_CLIENT_SECRET` — alleen nodig als die kant nog niet in productie draait.
+
 ---
 
 ## 2. Wat is er functioneel toegevoegd
