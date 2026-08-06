@@ -27,6 +27,15 @@ type ModuleItem = {
   assignment: { is_required: boolean; due_date: string | null } | null;
 };
 
+// PICA-fasenamen — 1-op-1 met het dashboard (operational/pica).
+const PHASE_NAMES: Record<number, string> = {
+  1: "Propositie",
+  2: "Inventarisatie",
+  3: "Overtuiging",
+  4: "Afsluiting",
+};
+const PICA_PHASES = [1, 2, 3, 4];
+
 const contentIcon = (type: string) => {
   switch (type) {
     case "presentation":
@@ -115,6 +124,82 @@ function LearningPage() {
   const completedCount = modules.filter(
     (m) => m.progress?.status === "completed",
   ).length;
+
+  // Eén modulekaart (herbruikt in de PICA-groepen én de kennis-lijst).
+  const renderCard = (m: ModuleItem) => {
+    const pct = m.progress?.progress ?? 0;
+    const done = m.progress?.status === "completed";
+    return (
+      <button
+        key={m.id}
+        onClick={() => router.push(`/learning/modules/${m.id}`)}
+        className="tw-text-left tw-bg-white tw-rounded-2xl tw-border tw-border-gray-200 tw-shadow-sm hover:tw-shadow-md tw-transition-shadow tw-overflow-hidden tw-flex tw-flex-col"
+      >
+        <div className="tw-h-36 tw-bg-indigo-50 tw-flex tw-items-center tw-justify-center tw-relative">
+          {m.thumbnail_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={m.thumbnail_url}
+              alt={m.title}
+              className="tw-w-full tw-h-full tw-object-cover"
+            />
+          ) : (
+            <span className="tw-text-[#5971F6]">{contentIcon(m.content_type)}</span>
+          )}
+          {done && (
+            <CheckCircleIcon className="tw-absolute tw-top-2 tw-right-2 tw-w-6 tw-h-6 tw-text-green-500 tw-bg-white tw-rounded-full" />
+          )}
+        </div>
+        <div className="tw-p-4 tw-flex tw-flex-col tw-flex-1">
+          <div className="tw-flex tw-items-center tw-gap-2 tw-mb-1 tw-flex-wrap">
+            {m.phase != null && (
+              <span className="tw-text-[10px] tw-font-semibold tw-uppercase tw-tracking-wide tw-bg-indigo-100 tw-text-[#5971F6] tw-rounded-full tw-px-2 tw-py-0.5">
+                {t("learning.phase")} {m.phase}
+              </span>
+            )}
+            {(m.assignment?.is_required ?? m.is_required) && (
+              <span className="tw-text-[10px] tw-font-semibold tw-uppercase tw-tracking-wide tw-bg-amber-100 tw-text-amber-700 tw-rounded-full tw-px-2 tw-py-0.5">
+                {t("learning.required")}
+              </span>
+            )}
+            {m.assignment && !m.assignment.is_required && (
+              <span className="tw-text-[10px] tw-font-semibold tw-uppercase tw-tracking-wide tw-bg-gray-100 tw-text-gray-600 tw-rounded-full tw-px-2 tw-py-0.5">
+                {t("learning.recommended")}
+              </span>
+            )}
+          </div>
+          <h3 className="tw-font-semibold tw-text-gray-900 tw-mb-1 tw-line-clamp-2">
+            {m.title}
+          </h3>
+          <p className="tw-text-sm tw-text-gray-500 tw-line-clamp-2 tw-flex-1">
+            {m.description}
+          </p>
+          <div className="tw-mt-3">
+            <div className="tw-flex tw-justify-between tw-text-xs tw-text-gray-500 tw-mb-1">
+              <span>
+                {m.duration > 0 && `${m.duration} ${t("learning.minutes")}`}
+                {m.question_count > 0 &&
+                  ` · ${m.question_count} ${t("learning.quiz").toLowerCase()}`}
+              </span>
+              <span>{pct}%</span>
+            </div>
+            <div className="tw-h-1.5 tw-bg-gray-100 tw-rounded-full tw-overflow-hidden">
+              <div
+                className={`tw-h-full tw-rounded-full ${done ? "tw-bg-green-500" : "tw-bg-[#5971F6]"}`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </button>
+    );
+  };
+
+  const cardGrid = (items: ModuleItem[]) => (
+    <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 lg:tw-grid-cols-3 tw-gap-5">
+      {items.map(renderCard)}
+    </div>
+  );
 
   return (
     <div className="tw-p-6 tw-max-w-7xl tw-mx-auto">
@@ -244,77 +329,34 @@ function LearningPage() {
         <p className="tw-text-gray-500 tw-py-10 tw-text-center">
           {t("learning.noModules")}
         </p>
-      ) : (
-        <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 lg:tw-grid-cols-3 tw-gap-5">
-          {visible.map((m) => {
-            const pct = m.progress?.progress ?? 0;
-            const done = m.progress?.status === "completed";
+      ) : tab === "sales_skills" ? (
+        // Sales-videomodules gegroepeerd onder PICA-fasekopjes (zoals het oude
+        // LMS): 1 Propositie, 2 Inventarisatie, 3 Overtuiging, 4 Afsluiting.
+        <div className="tw-space-y-8">
+          {PICA_PHASES.map((phase) => {
+            const inPhase = visible.filter((m) => m.phase === phase);
+            if (inPhase.length === 0) return null;
             return (
-              <button
-                key={m.id}
-                onClick={() => router.push(`/learning/modules/${m.id}`)}
-                className="tw-text-left tw-bg-white tw-rounded-2xl tw-border tw-border-gray-200 tw-shadow-sm hover:tw-shadow-md tw-transition-shadow tw-overflow-hidden tw-flex tw-flex-col"
-              >
-                <div className="tw-h-36 tw-bg-indigo-50 tw-flex tw-items-center tw-justify-center tw-relative">
-                  {m.thumbnail_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={m.thumbnail_url}
-                      alt={m.title}
-                      className="tw-w-full tw-h-full tw-object-cover"
-                    />
-                  ) : (
-                    <span className="tw-text-[#5971F6]">{contentIcon(m.content_type)}</span>
-                  )}
-                  {done && (
-                    <CheckCircleIcon className="tw-absolute tw-top-2 tw-right-2 tw-w-6 tw-h-6 tw-text-green-500 tw-bg-white tw-rounded-full" />
-                  )}
-                </div>
-                <div className="tw-p-4 tw-flex tw-flex-col tw-flex-1">
-                  <div className="tw-flex tw-items-center tw-gap-2 tw-mb-1 tw-flex-wrap">
-                    {m.phase != null && (
-                      <span className="tw-text-[10px] tw-font-semibold tw-uppercase tw-tracking-wide tw-bg-indigo-100 tw-text-[#5971F6] tw-rounded-full tw-px-2 tw-py-0.5">
-                        {t("learning.phase")} {m.phase}
-                      </span>
-                    )}
-                    {(m.assignment?.is_required ?? m.is_required) && (
-                      <span className="tw-text-[10px] tw-font-semibold tw-uppercase tw-tracking-wide tw-bg-amber-100 tw-text-amber-700 tw-rounded-full tw-px-2 tw-py-0.5">
-                        {t("learning.required")}
-                      </span>
-                    )}
-                    {m.assignment && !m.assignment.is_required && (
-                      <span className="tw-text-[10px] tw-font-semibold tw-uppercase tw-tracking-wide tw-bg-gray-100 tw-text-gray-600 tw-rounded-full tw-px-2 tw-py-0.5">
-                        {t("learning.recommended")}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="tw-font-semibold tw-text-gray-900 tw-mb-1 tw-line-clamp-2">
-                    {m.title}
-                  </h3>
-                  <p className="tw-text-sm tw-text-gray-500 tw-line-clamp-2 tw-flex-1">
-                    {m.description}
-                  </p>
-                  <div className="tw-mt-3">
-                    <div className="tw-flex tw-justify-between tw-text-xs tw-text-gray-500 tw-mb-1">
-                      <span>
-                        {m.duration > 0 && `${m.duration} ${t("learning.minutes")}`}
-                        {m.question_count > 0 &&
-                          ` · ${m.question_count} ${t("learning.quiz").toLowerCase()}`}
-                      </span>
-                      <span>{pct}%</span>
-                    </div>
-                    <div className="tw-h-1.5 tw-bg-gray-100 tw-rounded-full tw-overflow-hidden">
-                      <div
-                        className={`tw-h-full tw-rounded-full ${done ? "tw-bg-green-500" : "tw-bg-[#5971F6]"}`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </button>
+              <section key={phase}>
+                <h2 className="tw-text-lg tw-font-bold tw-text-gray-900 tw-mb-3">
+                  <span className="tw-text-[#5971F6]">{phase}.</span>{" "}
+                  {PHASE_NAMES[phase] || `${t("learning.phase")} ${phase}`}
+                </h2>
+                {cardGrid(inPhase)}
+              </section>
             );
           })}
+          {visible.some((m) => m.phase == null) && (
+            <section>
+              <h2 className="tw-text-lg tw-font-bold tw-text-gray-900 tw-mb-3">
+                {t("learning.otherModules")}
+              </h2>
+              {cardGrid(visible.filter((m) => m.phase == null))}
+            </section>
+          )}
         </div>
+      ) : (
+        cardGrid(visible)
       )}
     </div>
   );

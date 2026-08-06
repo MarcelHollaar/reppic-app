@@ -1490,7 +1490,8 @@
     "bulkUploadHint": "CSV with columns: name, email, phone (optional), learning_role (optional). Each row receives an invitation email.",
     "bulkUploadFailed": "Bulk upload failed.",
     "restart": "Restart module",
-    "restarted": "Module reset — you can start again"
+    "restarted": "Module reset — you can start again",
+    "otherModules": "Other modules"
   },
   "lmsModelSettings": {
     "pathgenTitle": "Model for AI learning-path generation",

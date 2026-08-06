@@ -1443,7 +1443,8 @@
     "bulkUploadHint": "CSV con colonne: nome, email, telefono (opzionale), ruolo di apprendimento (opzionale). Ogni riga riceve un'email di invito.",
     "bulkUploadFailed": "Caricamento di massa non riuscito.",
     "restart": "Riavvia il modulo",
-    "restarted": "Modulo reimpostato — puoi ricominciare"
+    "restarted": "Modulo reimpostato — puoi ricominciare",
+    "otherModules": "Altri moduli"
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modello per la generazione di percorsi con IA",

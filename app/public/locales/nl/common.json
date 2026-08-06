@@ -1489,7 +1489,8 @@
     "bulkUploadHint": "CSV met kolommen: naam, email, telefoon (optioneel), leerrol (optioneel). Iedere rij krijgt een uitnodigingsmail.",
     "bulkUploadFailed": "Bulk-upload mislukt.",
     "restart": "Module opnieuw starten",
-    "restarted": "Module teruggezet — je kunt opnieuw beginnen"
+    "restarted": "Module teruggezet — je kunt opnieuw beginnen",
+    "otherModules": "Overige modules"
   },
   "lmsModelSettings": {
     "pathgenTitle": "Model voor AI-leerpadgeneratie",

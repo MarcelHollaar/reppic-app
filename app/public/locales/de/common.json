@@ -1453,7 +1453,8 @@
     "bulkUploadHint": "CSV mit Spalten: Name, E-Mail, Telefon (optional), Lernrolle (optional). Jede Zeile erhält eine Einladungs-E-Mail.",
     "bulkUploadFailed": "Massenupload fehlgeschlagen.",
     "restart": "Modul neu starten",
-    "restarted": "Modul zurückgesetzt — du kannst neu beginnen"
+    "restarted": "Modul zurückgesetzt — du kannst neu beginnen",
+    "otherModules": "Weitere Module"
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modell für die KI-Lernpfaderstellung",

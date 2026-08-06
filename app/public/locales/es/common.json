@@ -1443,7 +1443,8 @@
     "bulkUploadHint": "CSV con columnas: nombre, email, teléfono (opcional), rol de aprendizaje (opcional). Cada fila recibe un correo de invitación.",
     "bulkUploadFailed": "Error en la carga masiva.",
     "restart": "Reiniciar módulo",
-    "restarted": "Módulo reiniciado — puedes empezar de nuevo"
+    "restarted": "Módulo reiniciado — puedes empezar de nuevo",
+    "otherModules": "Otros módulos"
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modelo para la generación de rutas con IA",
