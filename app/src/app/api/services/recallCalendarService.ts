@@ -81,6 +81,19 @@ const PLATFORMS: Record<CalendarPlatform, PlatformConfig> = {
   },
 };
 
+// Recall benoemt het platform in connecties/disconnect kort als "google" /
+// "microsoft"; onze connect-flow gebruikt langere IDs. Vertaal aan de rand.
+const RECALL_PLATFORM: Record<CalendarPlatform, "google" | "microsoft"> = {
+  google_calendar: "google",
+  microsoft_outlook: "microsoft",
+};
+
+function fromRecallPlatform(platform: string): CalendarPlatform | null {
+  if (platform === "google") return "google_calendar";
+  if (platform === "microsoft") return "microsoft_outlook";
+  return null;
+}
+
 export class CalendarPlatformNotConfiguredError extends Error {
   constructor(platform: CalendarPlatform) {
     super(`Calendar platform ${platform} is not configured`);
@@ -134,12 +147,18 @@ export class RecallCalendarService {
    */
   static async getConnectionStatus(
     userId: string
-  ): Promise<{ connected: boolean; platform: string | null; email: string | null }> {
+  ): Promise<{
+    connected: boolean;
+    platform: CalendarPlatform | null;
+    email: string | null;
+  }> {
     const calUser = await this.getCalendarUser(userId);
     const active = calUser?.connections.find((c) => c.connected);
     return {
       connected: Boolean(active),
-      platform: active?.platform ?? null,
+      // Vertaal Recall's "google"/"microsoft" naar onze interne platform-ID,
+      // zodat de UI-labels én de ontkoppel-route dit herkennen.
+      platform: active ? fromRecallPlatform(active.platform) : null,
       email: active?.email ?? null,
     };
   }
@@ -250,7 +269,8 @@ export class RecallCalendarService {
           "x-recallcalendarauthtoken": token,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ platform }),
+        // Recall verwacht letterlijk "google"/"microsoft", niet onze interne ID.
+        body: JSON.stringify({ platform: RECALL_PLATFORM[platform] }),
       }
     );
 
