@@ -26,6 +26,8 @@ const CalendarConnectionComponent = () => {
   const [busyPlatform, setBusyPlatform] = useState<Platform | "disconnect" | null>(
     null
   );
+  // Schakelbare pilot-disclaimer (DB-instelling); leeg = niets tonen.
+  const [notice, setNotice] = useState<string>("");
 
   const loadStatus = async () => {
     const headers = getAuthHeaders();
@@ -41,8 +43,22 @@ const CalendarConnectionComponent = () => {
     }
   };
 
+  const loadNotice = async () => {
+    const headers = getAuthHeaders();
+    if (!headers) return;
+    try {
+      const res = await fetch("/api/calendar/notice", { headers });
+      if (!res.ok) return;
+      const data = await res.json();
+      setNotice(typeof data.notice === "string" ? data.notice : "");
+    } catch {
+      // Disclaimer is niet-kritiek: bij een fout tonen we simpelweg niets.
+    }
+  };
+
   useEffect(() => {
     loadStatus();
+    loadNotice();
     // Terugkomst uit de OAuth-flow: toon resultaat en maak de URL schoon.
     const params = new URLSearchParams(window.location.search);
     const result = params.get("calendar");
@@ -123,6 +139,16 @@ const CalendarConnectionComponent = () => {
       <p className="tw-text-sm tw-text-gray-600 tw-mb-6">
         {t("calendar.description")}
       </p>
+
+      {/* Schakelbare pilot-disclaimer (DB-instelling calendar_pilot_notice).
+          Toont niets als de waarde leeg is — developer kan 'm zonder deploy
+          aanpassen of leegmaken. */}
+      {notice && (
+        <div className="tw-flex tw-gap-2 tw-items-start tw-bg-amber-50 tw-border tw-border-amber-200 tw-text-amber-900 tw-rounded-lg tw-p-4 tw-mb-6 tw-text-sm">
+          <span aria-hidden="true">⏳</span>
+          <span>{notice}</span>
+        </div>
+      )}
 
       {isLoading ? (
         <Spinner className="tw-h-6 tw-w-6" />
