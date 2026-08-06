@@ -10,6 +10,7 @@ import {
   type PrepContent,
 } from "@/lib/prep-analysis/promptSchema";
 import { extractExternalAttendees } from "@/lib/prospect/resolveProspect";
+import { RecallCalendarService } from "./recallCalendarService";
 
 // Kern van de gespreksvoorbereiding: combineert de analyse van het vorige
 // gesprek met dezelfde klant en de HubSpot-dealcontext tot een briefing, en
@@ -276,15 +277,23 @@ export const prepAnalysisService = {
     }
 
     // --- Externe deelnemers + prospect ---
-    // Anker op de verkoper (Reppic-gebruiker), niet de organisator: als de
-    // klant de afspraak organiseert, is de organisator juist de prospect.
-    const notetakerExclude = process.env.NOTETAKER_EMAIL
-      ? [process.env.NOTETAKER_EMAIL]
-      : [];
+    // Anker op het gekoppelde agenda-account (kan afwijken van de Reppic-login),
+    // niet de organisator: als de klant de afspraak organiseert, is de
+    // organisator juist de prospect. Notetaker-bot + login als extra uitsluiting.
+    let sellerEmail = user.email;
+    try {
+      const conn = await RecallCalendarService.getConnectionStatus(userId);
+      if (conn.email) sellerEmail = conn.email;
+    } catch {
+      // agenda-account onbekend: login als anker is prima
+    }
+    const extraExclude = [user.email, process.env.NOTETAKER_EMAIL].filter(
+      Boolean
+    ) as string[];
     const externalAttendees = extractExternalAttendees(
       meeting.attendeeEmails,
-      user.email,
-      notetakerExclude
+      sellerEmail,
+      extraExclude
     );
     if (externalAttendees.length === 0) {
       const row = await upsertPrepRow({
@@ -303,8 +312,8 @@ export const prepAnalysisService = {
     const resolved = await ProspectAccountService.resolveAndUpsertProspect(
       companyId,
       meeting.attendeeEmails,
-      user.email,
-      notetakerExclude
+      sellerEmail,
+      extraExclude
     );
     const prospectAccountId = resolved?.prospectAccountId ?? null;
     const prepRow = await upsertPrepRow({

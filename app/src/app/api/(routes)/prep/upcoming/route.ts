@@ -3,6 +3,7 @@ import { authMiddleware } from "@/app/api/middleware/authMiddleware";
 import { RecallAIService } from "@/app/api/services/recallAIService";
 import { prisma } from "@/app/api/utils/prisma";
 import { extractExternalAttendees } from "@/lib/prospect/resolveProspect";
+import { RecallCalendarService } from "@/app/api/services/recallCalendarService";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,21 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ calendarConnected: false, meetings: [] });
   }
 
+  // De verkoper kan in de agenda onder een ander adres staan dan zijn
+  // Reppic-login (bv. login outlook.com, agenda @eigenbedrijf.nl). Anker op
+  // het gekoppelde agenda-account, zodat de verkoper én zijn collega's op dat
+  // domein niet als klant tellen. Valt terug op de login als het onbekend is.
+  let sellerEmail = user.email;
+  try {
+    const conn = await RecallCalendarService.getConnectionStatus(user.id);
+    if (conn.email) sellerEmail = conn.email;
+  } catch {
+    // agenda-account onbekend: login als anker is prima
+  }
+  const extraExclude = [user.email, process.env.NOTETAKER_EMAIL].filter(
+    Boolean
+  ) as string[];
+
   const valid = meetings.filter((m) => m?.id && m.start_time);
   const eventIds = valid.map((m) => m.id);
   const preps = eventIds.length
@@ -63,8 +79,8 @@ export async function GET(req: NextRequest) {
       // klant de afspraak organiseert, is de organisator juist de prospect.
       const external = extractExternalAttendees(
         attendeeEmails,
-        user.email,
-        process.env.NOTETAKER_EMAIL ? [process.env.NOTETAKER_EMAIL] : []
+        sellerEmail,
+        extraExclude
       );
       const prep = prepByEvent.get(m.id);
       return {
