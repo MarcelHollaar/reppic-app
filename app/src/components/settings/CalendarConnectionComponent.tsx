@@ -40,7 +40,7 @@ const MicrosoftLogo = () => (
  * automatisch een gespreksvoorbereiding te sturen — puur lezen, geen opname.
  */
 const CalendarConnectionComponent = () => {
-  const { t } = useTranslation("common");
+  const { t, i18n } = useTranslation("common");
   const [status, setStatus] = useState<CalendarStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [busyPlatform, setBusyPlatform] = useState<Platform | "disconnect" | null>(
@@ -67,7 +67,8 @@ const CalendarConnectionComponent = () => {
     const headers = getAuthHeaders();
     if (!headers) return;
     try {
-      const res = await fetch("/api/calendar/notice", { headers });
+      const lang = encodeURIComponent(i18n.language || "");
+      const res = await fetch(`/api/calendar/notice?lang=${lang}`, { headers });
       if (!res.ok) return;
       const data = await res.json();
       setNotice(typeof data.notice === "string" ? data.notice : "");

@@ -145,7 +145,6 @@ export async function runPrepareFollowups(options: {
             title: meeting.title ?? null,
             startTime: new Date(meeting.start_time),
             attendeeEmails,
-            organizerEmail: meeting.organizer_email || user.email,
           },
         });
 

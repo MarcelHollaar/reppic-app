@@ -40,7 +40,6 @@ export async function POST(req: NextRequest) {
     title: string | null;
     startTime: Date;
     attendeeEmails: string[];
-    organizerEmail: string;
   } | null = null;
 
   if (typeof body?.calendarEventId === "string" && body.calendarEventId) {
@@ -76,7 +75,6 @@ export async function POST(req: NextRequest) {
       title: found.title ?? null,
       startTime: new Date(found.start_time),
       attendeeEmails,
-      organizerEmail: found.organizer_email || user.email,
     };
   } else if (typeof body?.conversationId === "string" && body.conversationId) {
     // Vorm 2: vanaf de gesprek-detailpagina.
@@ -110,7 +108,6 @@ export async function POST(req: NextRequest) {
         : "Vervolggesprek",
       startTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
       attendeeEmails: [user.email, ...attendees],
-      organizerEmail: user.email,
     };
   } else {
     return NextResponse.json(

@@ -203,57 +203,6 @@ export class RecallCalendarService {
   }
 
   /**
-   * Leest de huidige opname-voorkeuren (om de exacte vorm te kennen vóórdat we
-   * ze aanpassen — de Recall-docs specificeren de default niet). Best-effort.
-   */
-  static async getRecordingPreferences(
-    userId: string
-  ): Promise<Record<string, any> | null> {
-    const calUser = await this.getCalendarUser(userId);
-    return calUser?.preferences ?? null;
-  }
-
-  /**
-   * Zet auto-opname expliciet UIT na een koppeling: de agenda-koppeling dient
-   * puur om afspraken te LEZEN voor de gespreksvoorbereiding. Zo gaat er nooit
-   * per ongeluk een tweede notetaker naar meetings naast de centrale notetaker.
-   *
-   * Best-effort en gelogd: faalt dit, dan blijft de koppeling bruikbaar voor het
-   * lezen; we forceren de koppeling er niet op stuk. De exacte preference-vorm
-   * wordt in de E2E-stap geverifieerd via getRecordingPreferences.
-   */
-  static async disableAutoRecording(userId: string): Promise<void> {
-    try {
-      const token = await RecallAIService.getCalendarAuthToken(userId);
-      const response = await fetch(`${RECALL_BASE_URL}/api/v1/calendar/user/`, {
-        method: "PATCH",
-        headers: {
-          "x-recallcalendarauthtoken": token,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          preferences: {
-            record_non_host: false,
-            record_recurring: false,
-            record_external: false,
-            record_internal: false,
-            record_confirmed: false,
-            record_only_host: false,
-          },
-        }),
-      });
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.warn(
-          `[RecallCalendar] disableAutoRecording non-OK: ${response.status} ${errorText}`
-        );
-      }
-    } catch (error) {
-      console.warn("[RecallCalendar] disableAutoRecording failed:", error);
-    }
-  }
-
-  /**
    * Ontkoppelt een platform bij Recall.
    */
   static async disconnectPlatform(

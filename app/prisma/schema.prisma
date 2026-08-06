@@ -513,7 +513,9 @@ model TitleTranslation {
 
 model PlatformSetting {
   key        String   @id @db.VarChar(64)
-  value      String   @db.VarChar(255)
+  // Text i.p.v. VarChar(255): sommige instellingen (bv. de meertalige
+  // agenda-disclaimer als JSON) zijn langer dan 255 tekens.
+  value      String   @db.Text
   updated_at DateTime @updatedAt
 
   @@map("platform_settings")

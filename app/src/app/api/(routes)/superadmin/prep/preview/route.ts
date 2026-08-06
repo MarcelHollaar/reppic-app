@@ -75,7 +75,6 @@ export async function POST(req: NextRequest) {
         title: body.meetingTitle || "Preview-meeting",
         startTime: meetingStart,
         attendeeEmails: [user.email, prospectEmail, ...extraAttendees],
-        organizerEmail: user.email,
       },
       sendEmail,
     });

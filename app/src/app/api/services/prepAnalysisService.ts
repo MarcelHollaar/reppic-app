@@ -34,7 +34,6 @@ export interface PrepMeetingInput {
   title: string | null;
   startTime: Date;
   attendeeEmails: string[];
-  organizerEmail: string;
 }
 
 export interface PrepResult {
