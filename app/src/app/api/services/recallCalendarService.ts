@@ -42,6 +42,9 @@ interface PlatformConfig {
   recallCallbackPath: string;
   // De sleutel waaronder Recall die callback-URL in de state verwacht.
   stateRedirectKey: string;
+  // Platform-specifieke extra authorize-parameters (Google en Microsoft
+  // verschillen hierin wezenlijk — zie hieronder).
+  extraParams: Record<string, string>;
 }
 
 const PLATFORMS: Record<CalendarPlatform, PlatformConfig> = {
@@ -52,16 +55,29 @@ const PLATFORMS: Record<CalendarPlatform, PlatformConfig> = {
       "https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/userinfo.email",
     recallCallbackPath: "/api/v1/calendar/google_oauth_callback/",
     stateRedirectKey: "google_oauth_redirect_url",
+    // Google vereist access_type=offline + prompt=consent om een refresh token
+    // te krijgen (zie recall-docs + bewezen tijdens de koppeling).
+    extraParams: {
+      access_type: "offline",
+      prompt: "consent",
+      include_granted_scopes: "true",
+    },
   },
   microsoft_outlook: {
-    // Microsoft-specifieke waarden worden in bouwstap 5 geverifieerd tegen
-    // Recall's Microsoft-setup-doc; structuur staat er alvast pluggable in.
+    // Waarden conform Recall Calendar V1 Microsoft-doc.
     clientIdEnv: "MICROSOFT_OAUTH_CLIENT_ID",
     authorizeBase:
       "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
-    scope: "offline_access Calendars.Read User.Read",
+    // Volledige Graph-scope + offline_access (refresh token) + openid/email.
+    scope:
+      "offline_access openid email https://graph.microsoft.com/Calendars.Read",
     recallCallbackPath: "/api/v1/calendar/ms_oauth_callback/",
     stateRedirectKey: "ms_oauth_redirect_url",
+    // Microsoft: response_mode=query; GEEN prompt=consent (Recall-doc raadt dat
+    // in productie af) en GEEN access_type/include_granted_scopes (Google-only).
+    extraParams: {
+      response_mode: "query",
+    },
   },
 };
 
@@ -160,10 +176,8 @@ export class RecallCalendarService {
       response_type: "code",
       redirect_uri: recallCallbackUrl,
       scope: config.scope,
-      access_type: "offline",
-      prompt: "consent",
-      include_granted_scopes: "true",
       state,
+      ...config.extraParams,
     });
 
     return `${config.authorizeBase}?${params.toString()}`;
