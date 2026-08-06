@@ -11,6 +11,7 @@
  * - Quizbeoordeling gebeurt server-side; juiste antwoorden verlaten de
  *   server nooit richting de learner.
  */
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/app/api/utils/prisma";
 import { LEARNING_ROLE, USER_ROLE } from "@/configs/constants";
 import { learningTranslationService } from "@/lib/services/learningTranslationService";
@@ -217,6 +218,40 @@ export const learningService = {
   },
 
   /** Kijk-/leesvoortgang bijwerken (geen quiz). */
+  /**
+   * Voortgang van een module terugzetten (bewuste uitbreiding t.o.v. het oude
+   * LMS, keuze van de gebruiker zelf): status/score/antwoorden gaan naar de
+   * beginstand zodat video én quiz opnieuw gedaan kunnen worden. Eerder
+   * behaalde certificaten blijven bewust staan (historisch bewijs).
+   */
+  async resetProgress(user: AuthUser, moduleId: string) {
+    const visible = await this.getModuleVisible(user, moduleId);
+    if (!visible) return null;
+    return prisma.learningProgress.upsert({
+      where: {
+        learning_progress_user_module_unique: {
+          user_id: user.id,
+          module_id: moduleId,
+        },
+      },
+      update: {
+        status: "not_started",
+        progress: 0,
+        score: null,
+        answers: Prisma.DbNull,
+        started_at: null,
+        completed_at: null,
+        last_accessed_at: new Date(),
+      },
+      create: {
+        user_id: user.id,
+        module_id: moduleId,
+        status: "not_started",
+        progress: 0,
+      },
+    });
+  },
+
   async updateProgress(
     user: AuthUser,
     moduleId: string,

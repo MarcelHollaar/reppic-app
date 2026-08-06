@@ -295,6 +295,26 @@ async function main() {
   // Synthesia-video (klant-eis taalgedrag 1-op-1).
   const translations = readJsonl("translations.jsonl");
   const merged = new Map(); // `${moduleId}|${lang}` -> content-object
+
+  // Vraag-vertalingen zijn per VRAAG opgeslagen; de app verwacht per (module,
+  // taal) een array `questions` op gesorteerde volgorde (order_index). Bouw
+  // daarvoor een kaart vraag-id → (module, positie).
+  const qMeta = new Map(); // question_id -> { moduleId, pos }
+  {
+    const byModule = new Map();
+    for (const q of questions) {
+      if (!importedModuleIds.has(q.module_id)) continue;
+      const arr = byModule.get(q.module_id) || [];
+      arr.push(q);
+      byModule.set(q.module_id, arr);
+    }
+    for (const [moduleId, arr] of byModule) {
+      arr.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+      arr.forEach((q, pos) => qMeta.set(q.id, { moduleId, pos, total: arr.length }));
+    }
+  }
+  const questionTr = new Map(); // `${moduleId}|${lang}` -> Map(pos -> {question, options, explanation})
+
   let trSkippedOrphan = 0;
   for (const t of translations) {
     const lang = t.language;
@@ -310,8 +330,20 @@ async function main() {
     } else if (t.entity_type === "module_thumbnail") {
       moduleId = t.entity_id;
       patch = { thumbnailUrl: rewriteDam(tc.thumbnailUrl) };
+    } else if (t.entity_type === "question") {
+      const meta = qMeta.get(t.entity_id);
+      if (!meta) { trSkippedOrphan++; continue; }
+      const key = `${meta.moduleId}|${lang}`;
+      const posMap = questionTr.get(key) || new Map();
+      posMap.set(meta.pos, {
+        question: tc.question,
+        options: tc.options,
+        explanation: tc.explanation ?? null,
+      });
+      questionTr.set(key, posMap);
+      continue;
     } else {
-      continue; // question-vertalingen: alleen relevant zodra er vragen zijn
+      continue;
     }
     if (!importedModuleIds.has(moduleId)) { trSkippedOrphan++; continue; }
     const key = `${moduleId}|${lang}`;
@@ -319,6 +351,17 @@ async function main() {
     for (const [k, v] of Object.entries(patch)) {
       if (v !== undefined && v !== null && v !== "") existing[k] = v;
     }
+    merged.set(key, existing);
+  }
+
+  // Vraag-vertalingen als arrays (positie = gesorteerde order_index; gaten
+  // blijven null → de app valt daar terug op de brontaal-vraag).
+  for (const [key, posMap] of questionTr) {
+    const existing = merged.get(key) || {};
+    const total = Math.max(...[...posMap.keys()]) + 1;
+    const arr = new Array(total).fill(null);
+    for (const [pos, q] of posMap) arr[pos] = q;
+    existing.questions = arr;
     merged.set(key, existing);
   }
   let trUpserts = 0;

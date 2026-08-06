@@ -1451,7 +1451,9 @@
     "tagDuplicate": "Dieses Tag existiert bereits.",
     "bulkUpload": "Massenupload (CSV)",
     "bulkUploadHint": "CSV mit Spalten: Name, E-Mail, Telefon (optional), Lernrolle (optional). Jede Zeile erhält eine Einladungs-E-Mail.",
-    "bulkUploadFailed": "Massenupload fehlgeschlagen."
+    "bulkUploadFailed": "Massenupload fehlgeschlagen.",
+    "restart": "Modul neu starten",
+    "restarted": "Modul zurückgesetzt — du kannst neu beginnen"
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modell für die KI-Lernpfaderstellung",

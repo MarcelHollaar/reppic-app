@@ -1488,7 +1488,9 @@
     "tagDuplicate": "This tag already exists.",
     "bulkUpload": "Bulk upload (CSV)",
     "bulkUploadHint": "CSV with columns: name, email, phone (optional), learning_role (optional). Each row receives an invitation email.",
-    "bulkUploadFailed": "Bulk upload failed."
+    "bulkUploadFailed": "Bulk upload failed.",
+    "restart": "Restart module",
+    "restarted": "Module reset — you can start again"
   },
   "lmsModelSettings": {
     "pathgenTitle": "Model for AI learning-path generation",

@@ -1441,7 +1441,9 @@
     "tagDuplicate": "Questo tag esiste già.",
     "bulkUpload": "Caricamento di massa (CSV)",
     "bulkUploadHint": "CSV con colonne: nome, email, telefono (opzionale), ruolo di apprendimento (opzionale). Ogni riga riceve un'email di invito.",
-    "bulkUploadFailed": "Caricamento di massa non riuscito."
+    "bulkUploadFailed": "Caricamento di massa non riuscito.",
+    "restart": "Riavvia il modulo",
+    "restarted": "Modulo reimpostato — puoi ricominciare"
   },
   "lmsModelSettings": {
     "pathgenTitle": "Modello per la generazione di percorsi con IA",

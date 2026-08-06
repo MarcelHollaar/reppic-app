@@ -1487,7 +1487,9 @@
     "tagDuplicate": "Deze tag bestaat al.",
     "bulkUpload": "Bulk-upload (CSV)",
     "bulkUploadHint": "CSV met kolommen: naam, email, telefoon (optioneel), leerrol (optioneel). Iedere rij krijgt een uitnodigingsmail.",
-    "bulkUploadFailed": "Bulk-upload mislukt."
+    "bulkUploadFailed": "Bulk-upload mislukt.",
+    "restart": "Module opnieuw starten",
+    "restarted": "Module teruggezet — je kunt opnieuw beginnen"
   },
   "lmsModelSettings": {
     "pathgenTitle": "Model voor AI-leerpadgeneratie",

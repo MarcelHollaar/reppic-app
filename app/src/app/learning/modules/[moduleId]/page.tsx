@@ -127,6 +127,24 @@ function ModulePage() {
     toast.success(t("learning.completed"));
   };
 
+  const restartModule = async () => {
+    if (!headers) return;
+    await fetch(`/api/learning/modules/${moduleId}/reset`, {
+      method: "POST",
+      headers,
+    });
+    // Antwoorden + uitslag lokaal wissen en voortgang terugzetten.
+    setAnswers({});
+    setQuizResult(null);
+    startedAtRef.current = Date.now();
+    setDetail((d) =>
+      d
+        ? { ...d, progress: { status: "not_started", progress: 0, score: null } }
+        : d,
+    );
+    toast.success(t("learning.restarted"));
+  };
+
   const submitQuiz = async () => {
     if (!headers || !detail) return;
     if (Object.keys(answers).length < detail.questions.length) {
@@ -227,12 +245,20 @@ function ModulePage() {
         </div>
       ) : null}
 
-      {detail.progress?.status !== "completed" && (
+      {detail.progress?.status !== "completed" ? (
         <button
           onClick={markViewed}
           className="tw-bg-white tw-border tw-border-gray-300 tw-rounded-full tw-px-4 tw-py-2 tw-text-sm tw-font-semibold tw-text-gray-700 hover:tw-bg-gray-50 tw-mb-8"
         >
           ✓ {t("learning.completed")}
+        </button>
+      ) : (
+        // Afgerond → de gebruiker mag de module (incl. quiz) altijd opnieuw doen.
+        <button
+          onClick={restartModule}
+          className="tw-bg-white tw-border tw-border-gray-300 tw-rounded-full tw-px-4 tw-py-2 tw-text-sm tw-font-semibold tw-text-[#5971F6] hover:tw-bg-indigo-50 tw-mb-8"
+        >
+          ↻ {t("learning.restart")}
         </button>
       )}
 
