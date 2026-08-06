@@ -54,6 +54,17 @@ starten"-knop; toegewezen-maar-niet-gestarte modules verschijnen op de
 Voortgang-pagina; sales-modules gegroepeerd onder **PICA-fasekopjes**
 (1 Propositie, 2 Inventarisatie, 3 Overtuiging, 4 Afsluiting).
 
+### G. LMS tenant-audit (2026-08-06, drie parallelle code-audits)
+Volledige audit op tenant-isolatie van alle LMS-routes/services: kern was
+overal correct op `company_id` gescoped. Drie kleine randjes gedicht:
+`getModuleJobRoles` (functierol-namen via geraden module-id), `upsertPath`
+(module_ids/job_role_id nu tegen eigen/globale scope gevalideerd) en
+helpcentrum-`getArticle` (concept/admin-only artikelen niet meer via direct id
+voor learners). Bonus-bugfix: `helpRoleFor` crashte op de object-vorm van
+`user.role`, waardoor het helpcentrum voor gewone learners een 500 gaf.
+Thumbnail-kaart op /learning naar 16:9 (hoofd werd afgesneden). Alle fixes
+functioneel bewezen met een twee-bedrijven-testscenario (10/10 checks).
+
 ---
 
 ## 2. Deploy-stappen productie
