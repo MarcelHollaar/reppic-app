@@ -40,7 +40,7 @@ const contentIcon = (type: string) => {
 
 function LearningPage() {
   const router = useRouter();
-  const { t } = useTranslation("common");
+  const { t, i18n } = useTranslation("common");
   const [modules, setModules] = useState<ModuleItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"sales_skills" | "knowledge">("sales_skills");
@@ -61,16 +61,19 @@ function LearningPage() {
   useEffect(() => {
     const headers = getAuthHeaders();
     if (!headers) return;
-    fetch("/api/learning/modules", { headers })
+    // Taal meesturen zodat titels/omschrijvingen in de gebruikerstaal komen
+    // (zelfde gedrag als de detailpagina) + herladen bij taalwissel.
+    fetch(`/api/learning/modules?lang=${i18n.language}`, { headers })
       .then((r) => r.json())
       .then((res) => setModules(res.data || []))
       .catch(() => setModules([]))
       .finally(() => setLoading(false));
-    fetch("/api/learning/recommendations", { headers })
+    fetch(`/api/learning/recommendations?lang=${i18n.language}`, { headers })
       .then((r) => (r.ok ? r.json() : { data: null }))
       .then((res) => setRecommendations(res.data))
       .catch(() => {});
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [i18n.language]);
 
   const hasKnowledge = useMemo(
     () => modules.some((m) => m.learning_path_type === "knowledge"),

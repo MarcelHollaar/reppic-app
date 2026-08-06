@@ -49,7 +49,7 @@ export const learningRecommendationsService = {
    * Aanbevolen modules voor deze learner, met de reden (zwakke fasen).
    * Kijkt naar de laatste RECENT_CONVERSATIONS geanalyseerde salesgesprekken.
    */
-  async getRecommendations(user: AuthUser) {
+  async getRecommendations(user: AuthUser, language?: string) {
     // 1. Fase-scores uit de recente gespreksanalyses van deze gebruiker.
     const summaries = await prisma.conversationSummaryX.findMany({
       where: {
@@ -146,6 +146,28 @@ export const learningRecommendationsService = {
         reason_score:
           weakPhases.find((p) => p.phase === m.phase)?.score ?? null,
       }));
+
+    // Titels in de gebruikerstaal (zelfde bron als de detailpagina).
+    if (language && recommended.length > 0) {
+      const translations = await prisma.learningModuleTranslation.findMany({
+        where: {
+          module_id: { in: recommended.map((m) => m.id) },
+          language,
+        },
+        select: { module_id: true, content: true },
+      });
+      const byModule = new Map(
+        translations.map((t) => [
+          t.module_id,
+          (t.content ?? {}) as { title?: string; description?: string },
+        ]),
+      );
+      for (const m of recommended) {
+        const tr = byModule.get(m.id);
+        if (tr?.title) m.title = tr.title;
+        if (tr?.description) m.description = tr.description;
+      }
+    }
 
     return {
       weak_phases: weakPhases,

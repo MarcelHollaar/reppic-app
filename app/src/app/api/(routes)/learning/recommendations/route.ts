@@ -11,6 +11,9 @@ export async function GET(req: NextRequest) {
   const authCheck = await learningAuthMiddleware(req, LEARNING_ROLE.LEARNER);
   if (authCheck) return authCheck;
   const user = (req as any).user;
-  const data = await learningRecommendationsService.getRecommendations(user);
+  const data = await learningRecommendationsService.getRecommendations(
+    user,
+    req.nextUrl.searchParams.get("lang") || undefined,
+  );
   return NextResponse.json({ data });
 }

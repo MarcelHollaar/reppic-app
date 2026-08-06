@@ -64,6 +64,7 @@ export const learningService = {
   async getModulesForUser(
     user: AuthUser,
     filters: { type?: string; categoryId?: string } = {},
+    language?: string,
   ) {
     const where: any = await accessibleModulesWhere(user);
     if (filters.type === "sales_skills" || filters.type === "knowledge") {
@@ -87,6 +88,7 @@ export const learningService = {
           content_type: true,
           thumbnail_url: true,
           is_required: true,
+          original_language: true,
           category: { select: { id: true, name: true } },
           _count: { select: { questions: true } },
         },
@@ -111,13 +113,45 @@ export const learningService = {
       assignments.map((a) => [a.module_id, a]),
     );
 
-    return modules.map((m) => ({
-      ...m,
-      question_count: m._count.questions,
-      _count: undefined,
-      progress: progressByModule.get(m.id) || null,
-      assignment: assignmentByModule.get(m.id) || null,
-    }));
+    // Lijst in de taal van de gebruiker (net als de detailpagina): vertaalde
+    // titel/omschrijving/thumbnail in één batch ophalen en toepassen.
+    const translationByModule = new Map<
+      string,
+      { title?: string; description?: string; thumbnailUrl?: string }
+    >();
+    if (language) {
+      const translations = await prisma.learningModuleTranslation.findMany({
+        where: { module_id: { in: modules.map((m) => m.id) }, language },
+        select: { module_id: true, content: true },
+      });
+      for (const t of translations) {
+        translationByModule.set(
+          t.module_id,
+          (t.content ?? {}) as {
+            title?: string;
+            description?: string;
+            thumbnailUrl?: string;
+          },
+        );
+      }
+    }
+
+    return modules.map((m) => {
+      const tr =
+        language && language !== m.original_language
+          ? translationByModule.get(m.id)
+          : undefined;
+      return {
+        ...m,
+        title: tr?.title || m.title,
+        description: tr?.description || m.description,
+        thumbnail_url: tr?.thumbnailUrl || m.thumbnail_url,
+        question_count: m._count.questions,
+        _count: undefined,
+        progress: progressByModule.get(m.id) || null,
+        assignment: assignmentByModule.get(m.id) || null,
+      };
+    });
   },
 
   /** Moduledetail voor de learner — quizvragen ZONDER juiste antwoorden. */

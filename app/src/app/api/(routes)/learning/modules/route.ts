@@ -10,9 +10,13 @@ export async function GET(req: NextRequest) {
 
   const user = (req as any).user;
   const searchParams = req.nextUrl.searchParams;
-  const data = await learningService.getModulesForUser(user, {
-    type: searchParams.get("type") || undefined,
-    categoryId: searchParams.get("category") || undefined,
-  });
+  const data = await learningService.getModulesForUser(
+    user,
+    {
+      type: searchParams.get("type") || undefined,
+      categoryId: searchParams.get("category") || undefined,
+    },
+    searchParams.get("lang") || undefined,
+  );
   return NextResponse.json({ data });
 }
