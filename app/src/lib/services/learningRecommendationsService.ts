@@ -49,7 +49,10 @@ export const learningRecommendationsService = {
    * Aanbevolen modules voor deze learner, met de reden (zwakke fasen).
    * Kijkt naar de laatste RECENT_CONVERSATIONS geanalyseerde salesgesprekken.
    */
-  async getRecommendations(user: AuthUser, language?: string) {
+  async getRecommendations(user: AuthUser, requestedLanguage?: string) {
+    // Expliciete keuze wint; anders de profieltaal van de gebruiker.
+    const language =
+      requestedLanguage || (user as { lang_code?: string | null }).lang_code || undefined;
     // 1. Fase-scores uit de recente gespreksanalyses van deze gebruiker.
     const summaries = await prisma.conversationSummaryX.findMany({
       where: {

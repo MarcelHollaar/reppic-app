@@ -23,7 +23,21 @@ export type AuthUser = {
   company_id: string | null;
   learning_role: string | null;
   role: { name: string } | null;
+  /** Profieltaal — de server-side bron van waarheid voor de weergavetaal. */
+  lang_code?: string | null;
 };
+
+/**
+ * Weergavetaal voor leerinhoud: expliciete keuze (queryparam) wint, anders de
+ * profieltaal van de gebruiker. Zo is inhoud ALTIJD gelokaliseerd, ook als een
+ * scherm vergeet een taal mee te sturen.
+ */
+export function resolveContentLanguage(
+  user: AuthUser,
+  requested?: string | null,
+): string | undefined {
+  return requested || user.lang_code || undefined;
+}
 
 export function isSuperAdmin(user: AuthUser) {
   return user.role?.name === USER_ROLE.SUPER_ADMIN;
@@ -64,8 +78,10 @@ export const learningService = {
   async getModulesForUser(
     user: AuthUser,
     filters: { type?: string; categoryId?: string } = {},
-    language?: string,
+    requestedLanguage?: string,
   ) {
+    // Expliciete keuze wint; anders de profieltaal — nooit "vergeten".
+    const language = resolveContentLanguage(user, requestedLanguage);
     const where: any = await accessibleModulesWhere(user);
     if (filters.type === "sales_skills" || filters.type === "knowledge") {
       where.learning_path_type = filters.type;
@@ -155,7 +171,12 @@ export const learningService = {
   },
 
   /** Moduledetail voor de learner — quizvragen ZONDER juiste antwoorden. */
-  async getModuleForUser(user: AuthUser, moduleId: string, language?: string) {
+  async getModuleForUser(
+    user: AuthUser,
+    moduleId: string,
+    requestedLanguage?: string,
+  ) {
+    const language = resolveContentLanguage(user, requestedLanguage);
     const where: any = await accessibleModulesWhere(user);
     const learningModule = await prisma.learningModule.findFirst({
       where: { ...where, id: moduleId },
@@ -399,6 +420,40 @@ export const learningService = {
     const completed = progress.filter((p) => p.status === "completed").length;
     const inProgress = progress.filter((p) => p.status === "in_progress").length;
     const totalTime = progress.reduce((sum, p) => sum + p.time_spent, 0);
+
+    // Moduletitels in de taal van de KIJKER (profieltaal) — zelfde bron als de
+    // detailpagina, zodat óók de voortgangspagina nooit de basistaal toont.
+    const lang = resolveContentLanguage(user);
+    if (lang) {
+      const moduleIds = [
+        ...new Set([
+          ...progress.map((p) => p.module.id),
+          ...certificates.map((c) => c.module.id),
+        ]),
+      ];
+      if (moduleIds.length > 0) {
+        const translations = await prisma.learningModuleTranslation.findMany({
+          where: { module_id: { in: moduleIds }, language: lang },
+          select: { module_id: true, content: true },
+        });
+        const titleByModule = new Map(
+          translations
+            .map((t) => [
+              t.module_id,
+              (t.content as { title?: string } | null)?.title,
+            ])
+            .filter((e): e is [string, string] => Boolean(e[1])),
+        );
+        for (const p of progress) {
+          const tr = titleByModule.get(p.module.id);
+          if (tr) p.module.title = tr;
+        }
+        for (const c of certificates) {
+          const tr = titleByModule.get(c.module.id);
+          if (tr) c.module.title = tr;
+        }
+      }
+    }
 
     return {
       user_id: userId,

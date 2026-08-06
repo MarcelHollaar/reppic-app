@@ -41,6 +41,9 @@ export async function authMiddleware(
         company: { select: { email: true } },
         company_id: true,
         learning_role: true,
+        // Profieltaal: de server bepaalt hiermee zélf de weergavetaal van
+        // leerinhoud (schermen kunnen het dus niet meer "vergeten").
+        lang_code: true,
       },
     });
 
