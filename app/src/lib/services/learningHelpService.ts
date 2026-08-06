@@ -7,13 +7,21 @@ import { prisma } from "@/app/api/utils/prisma";
 
 export type HelpRole = "all" | "learner" | "admin";
 
-/** LMS-rol van de app-gebruiker → help-doelrol (zoals productie req.user.role). */
+/**
+ * LMS-rol van de app-gebruiker → help-doelrol (zoals productie req.user.role).
+ * `role` mag zowel een string ("superadmin") als het Prisma-object ({name})
+ * uit de auth-middleware zijn — voorheen crashte `.includes` op het object,
+ * waardoor het helpcentrum voor gewone learners een 500 gaf.
+ */
 export function helpRoleFor(user: {
   learning_role?: string | null;
-  role?: string | null;
+  role?: string | { name?: string | null } | null;
 }): HelpRole {
   const lr = (user.learning_role || "").toLowerCase();
-  if (lr.includes("admin") || (user.role || "").includes("admin")) {
+  const roleName = (
+    (typeof user.role === "string" ? user.role : user.role?.name) || ""
+  ).toLowerCase();
+  if (lr.includes("admin") || roleName.includes("admin")) {
     return "admin";
   }
   return "learner";
@@ -62,10 +70,20 @@ export const learningHelpService = {
     });
   },
 
-  /** Enkel artikel + view-teller ophogen (zoals productie). */
-  async getArticle(id: string) {
+  /**
+   * Enkel artikel + view-teller ophogen (zoals productie).
+   * Publicatie-/rolcheck: een learner mag via een direct/geraden id géén
+   * concept- (niet-gepubliceerd) of admin-only artikel ophalen. Een admin
+   * (learning_admin/superadmin) mag alles zien, o.a. voor preview.
+   */
+  async getArticle(id: string, role: HelpRole = "learner") {
     const article = await prisma.helpArticle.findUnique({ where: { id } });
     if (!article) return null;
+    if (role !== "admin") {
+      const roleOk =
+        article.target_role === role || article.target_role === "all";
+      if (!article.is_published || !roleOk) return null;
+    }
     await prisma.helpArticle
       .update({ where: { id }, data: { view_count: { increment: 1 } } })
       .catch(() => {});

@@ -135,7 +135,9 @@ function LearningPage() {
         onClick={() => router.push(`/learning/modules/${m.id}`)}
         className="tw-text-left tw-bg-white tw-rounded-2xl tw-border tw-border-gray-200 tw-shadow-sm hover:tw-shadow-md tw-transition-shadow tw-overflow-hidden tw-flex tw-flex-col"
       >
-        <div className="tw-h-36 tw-bg-indigo-50 tw-flex tw-items-center tw-justify-center tw-relative">
+        {/* 16:9 zoals de Synthesia-thumbnails zelf, zodat er niets van het
+            beeld (bv. het hoofd) wordt afgesneden door object-cover. */}
+        <div className="tw-aspect-video tw-bg-indigo-50 tw-flex tw-items-center tw-justify-center tw-relative">
           {m.thumbnail_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img

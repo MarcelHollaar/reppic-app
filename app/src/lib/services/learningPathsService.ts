@@ -16,6 +16,7 @@ import {
   AuthUser,
   isSuperAdmin,
   isLearningAdmin,
+  companyLmsEnabled,
 } from "@/lib/services/learningService";
 
 type Result<T> = { data: T } | { error: "forbidden" | "not_found" | "invalid" };
@@ -25,6 +26,46 @@ function mayManageScoped(user: AuthUser, companyId: string | null): boolean {
   if (isSuperAdmin(user)) return true;
   // learning_admin: alleen objecten van het eigen bedrijf, nooit globale.
   return companyId !== null && companyId === user.company_id;
+}
+
+/**
+ * Scope-check: mag deze gebruiker naar dit (globale of bedrijfs-)object VERWIJZEN?
+ * Ruimer dan mayManageScoped: globale objecten (company_id NULL) mogen worden
+ * gekoppeld, maar niet bewerkt. Voorkomt cross-tenant koppelingen aan een
+ * geraden id van een ander bedrijf.
+ */
+function mayReferenceScoped(user: AuthUser, companyId: string | null): boolean {
+  if (isSuperAdmin(user)) return true;
+  return companyId === null || companyId === user.company_id;
+}
+
+/**
+ * Filtert een lijst module-id's tot alleen de modules die deze gebruiker mag
+ * zien (globaal + eigen bedrijf indien lms_enabled), met behoud van volgorde.
+ * Onbekende of vreemd-bedrijf-id's vallen stil weg — zelfde gedrag als
+ * createPathFromAnalysis, zodat een geraden id van bedrijf B nooit koppelt.
+ */
+async function scopeModuleIds(user: AuthUser, ids: string[]): Promise<string[]> {
+  if (ids.length === 0) return [];
+  const includeCompany = isSuperAdmin(user)
+    ? false
+    : await companyLmsEnabled(user.company_id);
+  const where = isSuperAdmin(user)
+    ? { id: { in: ids }, deleted_at: null }
+    : {
+        id: { in: ids },
+        deleted_at: null,
+        OR: [
+          { company_id: null },
+          ...(includeCompany ? [{ company_id: user.company_id }] : []),
+        ],
+      };
+  const found = await prisma.learningModule.findMany({
+    where,
+    select: { id: true },
+  });
+  const ok = new Set(found.map((m) => m.id));
+  return ids.filter((id) => ok.has(id));
 }
 
 export const learningPathsService = {
@@ -79,6 +120,18 @@ export const learningPathsService = {
     if (!isLearningAdmin(user)) return { error: "forbidden" };
     if (!data.job_function?.trim()) return { error: "invalid" };
 
+    // Tenant-check op de gekoppelde functierol: mag globaal of eigen bedrijf zijn,
+    // nooit een (geraden) functierol van een ander bedrijf.
+    if (data.job_role_id) {
+      const jr = await prisma.jobRole.findUnique({
+        where: { id: data.job_role_id },
+        select: { company_id: true },
+      });
+      if (!jr || !mayReferenceScoped(user, jr.company_id)) {
+        return { error: "forbidden" };
+      }
+    }
+
     let path;
     if (data.id) {
       const existing = await prisma.learningPath.findUnique({
@@ -112,15 +165,18 @@ export const learningPathsService = {
     }
 
     // Modules volledig vervangen in de opgegeven volgorde (indien meegestuurd).
+    // Eerst tot de zichtbare set scopen zodat een geraden module-id van een
+    // ander bedrijf niet gekoppeld kan worden (metadata-lek via getPath).
     if (Array.isArray(data.module_ids)) {
+      const allowedIds = await scopeModuleIds(user, data.module_ids);
       await prisma.learningPathModule.deleteMany({
         where: { learning_path_id: path.id },
       });
-      for (let i = 0; i < data.module_ids.length; i++) {
+      for (let i = 0; i < allowedIds.length; i++) {
         await prisma.learningPathModule.create({
           data: {
             learning_path_id: path.id,
-            module_id: data.module_ids[i],
+            module_id: allowedIds[i],
             order_index: i,
           },
         });
@@ -434,6 +490,15 @@ Kies alleen modules die echt relevant zijn voor het profiel; minder is beter dan
 
   async getModuleJobRoles(user: AuthUser, moduleId: string) {
     if (!isLearningAdmin(user)) return null;
+    // Tenant-check: alleen functierollen van een module die deze beheerder mag
+    // zien (globaal of eigen bedrijf). Zonder deze check zou een learning_admin
+    // via een geraden module-id de functierol-namen van een ander bedrijf zien.
+    const learningModule = await prisma.learningModule.findUnique({
+      where: { id: moduleId },
+      select: { company_id: true },
+    });
+    if (!learningModule) return null;
+    if (!mayReferenceScoped(user, learningModule.company_id)) return null;
     return prisma.moduleJobRole.findMany({
       where: { module_id: moduleId },
       include: { job_role: { select: { id: true, name: true, scope: true } } },

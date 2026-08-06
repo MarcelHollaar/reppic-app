@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { learningAuthMiddleware, authMiddleware } from "../../../../../middleware/authMiddleware";
 import { LEARNING_ROLE, USER_ROLE } from "@/configs/constants";
-import { learningHelpService } from "@/lib/services/learningHelpService";
+import { learningHelpService, helpRoleFor } from "@/lib/services/learningHelpService";
 
 type Params = { params: Promise<{ articleId: string }> };
 
@@ -10,7 +10,9 @@ export async function GET(req: NextRequest, { params }: Params) {
   const authCheck = await learningAuthMiddleware(req, LEARNING_ROLE.LEARNER);
   if (authCheck) return authCheck;
   const { articleId } = await params;
-  const article = await learningHelpService.getArticle(articleId);
+  // Rol bepaalt of concept-/admin-only artikelen zichtbaar zijn.
+  const role = helpRoleFor((req as any).user ?? {});
+  const article = await learningHelpService.getArticle(articleId, role);
   if (!article) {
     return NextResponse.json({ message: "not_found" }, { status: 404 });
   }
