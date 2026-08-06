@@ -74,18 +74,37 @@ export function isFreemailDomain(domain: string): boolean {
   return FREEMAIL_DOMAINS.has(domain.toLowerCase());
 }
 
-// Deelnemers die niet aan de verkoperskant zitten: alles behalve de
-// organisator zelf en collega's op hetzelfde domein. Zit de organisator
-// zelf op freemail, dan kunnen collega's niet via het domein worden
+// Systeem-/bot-adressen die nooit een eindklant zijn: de Reppic-notetaker die
+// als gast in de afspraak wordt uitgenodigd. Dit filtert ALLEEN wie als
+// prospect telt bij het opstellen van de prep — de notetaker-bot zelf blijft
+// volledig ongemoeid (wordt gewoon uitgenodigd en neemt op).
+const REPPIC_BOT_ADDRESSES = new Set(["notetaker@reppic.ai"]);
+
+// De externe deelnemers (eindklant-kant): alle deelnemers behalve de verkoper
+// zelf, diens collega's op hetzelfde zakelijke domein, en systeem-/bot-adressen.
+//
+// `internalEmail` is het ANKER van de verkoperskant — voor de prep is dat de
+// Reppic-gebruiker (agenda-eigenaar), niet per se de organisator: als de klant
+// de afspraak organiseert en de verkoper uitnodigt, is de organisator juist de
+// prospect. Zit de verkoper op freemail, dan kan niet op domein worden
 // uitgesloten en filteren we alleen het exacte adres.
+//
+// `extraExcludeEmails` laat de caller extra interne/bot-adressen meegeven
+// (bijv. een afwijkend notetaker-adres uit de omgeving).
 export function extractExternalAttendees(
   attendeeEmails: Array<string | null | undefined>,
-  organizerEmail: string
+  internalEmail: string,
+  extraExcludeEmails: Array<string | null | undefined> = []
 ): string[] {
-  const organizer = normalizeEmail(organizerEmail);
-  const organizerDomain = emailDomain(organizer);
+  const internal = normalizeEmail(internalEmail);
+  const internalDomain = emailDomain(internal);
   const excludeByDomain =
-    organizerDomain !== null && !isFreemailDomain(organizerDomain);
+    internalDomain !== null && !isFreemailDomain(internalDomain);
+
+  const excludeExact = new Set<string>([internal, ...REPPIC_BOT_ADDRESSES]);
+  for (const extra of extraExcludeEmails) {
+    if (extra) excludeExact.add(normalizeEmail(extra));
+  }
 
   const seen = new Set<string>();
   const external: string[] = [];
@@ -94,8 +113,8 @@ export function extractExternalAttendees(
     const email = normalizeEmail(raw);
     const domain = emailDomain(email);
     if (!domain) continue;
-    if (email === organizer) continue;
-    if (excludeByDomain && domain === organizerDomain) continue;
+    if (excludeExact.has(email)) continue;
+    if (excludeByDomain && domain === internalDomain) continue;
     if (seen.has(email)) continue;
     seen.add(email);
     external.push(email);

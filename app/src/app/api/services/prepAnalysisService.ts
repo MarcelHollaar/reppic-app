@@ -276,9 +276,15 @@ export const prepAnalysisService = {
     }
 
     // --- Externe deelnemers + prospect ---
+    // Anker op de verkoper (Reppic-gebruiker), niet de organisator: als de
+    // klant de afspraak organiseert, is de organisator juist de prospect.
+    const notetakerExclude = process.env.NOTETAKER_EMAIL
+      ? [process.env.NOTETAKER_EMAIL]
+      : [];
     const externalAttendees = extractExternalAttendees(
       meeting.attendeeEmails,
-      meeting.organizerEmail
+      user.email,
+      notetakerExclude
     );
     if (externalAttendees.length === 0) {
       const row = await upsertPrepRow({
@@ -297,7 +303,8 @@ export const prepAnalysisService = {
     const resolved = await ProspectAccountService.resolveAndUpsertProspect(
       companyId,
       meeting.attendeeEmails,
-      meeting.organizerEmail
+      user.email,
+      notetakerExclude
     );
     const prospectAccountId = resolved?.prospectAccountId ?? null;
     const prepRow = await upsertPrepRow({

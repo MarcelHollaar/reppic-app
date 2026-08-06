@@ -26,13 +26,15 @@ export class ProspectAccountService {
   static async resolveAndUpsertProspect(
     companyId: string | null | undefined,
     attendeeEmails: Array<string | null | undefined>,
-    organizerEmail: string
+    internalEmail: string,
+    extraExcludeEmails: Array<string | null | undefined> = []
   ): Promise<ResolvedProspect | null> {
     if (!companyId) return null;
 
     const externalAttendees = extractExternalAttendees(
       attendeeEmails,
-      organizerEmail
+      internalEmail,
+      extraExcludeEmails
     );
     if (externalAttendees.length === 0) return null;
 

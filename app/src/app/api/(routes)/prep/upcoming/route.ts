@@ -59,9 +59,12 @@ export async function GET(req: NextRequest) {
           ? m.attendee_emails
           : (m.attendees ?? []).map((a) => a.email)
       ).filter(Boolean);
+      // Anker op de verkoper (agenda-eigenaar), niet de organisator: als de
+      // klant de afspraak organiseert, is de organisator juist de prospect.
       const external = extractExternalAttendees(
         attendeeEmails,
-        m.organizer_email || user.email
+        user.email,
+        process.env.NOTETAKER_EMAIL ? [process.env.NOTETAKER_EMAIL] : []
       );
       const prep = prepByEvent.get(m.id);
       return {
