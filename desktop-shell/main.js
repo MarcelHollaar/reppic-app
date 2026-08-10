@@ -22,8 +22,21 @@ const http = require("http");
 const https = require("https");
 const fs = require("fs");
 const RecallAiSdk = require("@recallai/desktop-sdk");
+const { autoUpdater } = require("electron-updater");
 
-const REPPIC_URL = process.env.REPPIC_URL || "http://localhost:3200";
+// Web-app origin. Prioriteit:
+//   1. REPPIC_URL env — voor ontwikkelen/lokaal testen (`REPPIC_URL=... npm start`)
+//   2. `reppicUrl` in package.json — bij het bouwen ingebakken per omgeving via
+//      electron-builder `-c.extraMetadata.reppicUrl=https://app.testreppic.nl`
+//   3. productie-default
+let bakedReppicUrl;
+try {
+  bakedReppicUrl = require("./package.json").reppicUrl;
+} catch {
+  /* package.json niet leesbaar — val terug op default */
+}
+const REPPIC_URL =
+  process.env.REPPIC_URL || bakedReppicUrl || "https://app.reppic.ai";
 const RECALL_API_URL =
   process.env.RECALL_API_URL || "https://us-west-2.recall.ai";
 const TOKEN_ENDPOINT = `${REPPIC_URL}/api/recall/desktop-upload-token`;
@@ -427,6 +440,20 @@ app.whenReady().then(async () => {
       void syncTokenFromRenderer(mainWindow);
     }
   }, 2000);
+
+  // Auto-update: alleen in een verpakte (gedistribueerde) build. In dev (`npm start`)
+  // is er geen update-feed. De feed-URL staat in app-update.yml, dat electron-builder
+  // uit de `publish`-config (generic provider, UPDATE_FEED_URL) schrijft. De update
+  // wordt op de achtergrond gedownload en geïnstalleerd bij de volgende afsluiting.
+  if (app.isPackaged) {
+    autoUpdater.on("update-downloaded", (info) => {
+      log("update gedownload:", info && info.version, "— installeert bij afsluiten.");
+    });
+    autoUpdater.on("error", (err) => log("auto-update fout:", err && err.message));
+    autoUpdater
+      .checkForUpdatesAndNotify()
+      .catch((e) => log("update-check faalde:", e && e.message));
+  }
 
   log("Klaar — luistert op meeting-detected.");
 });

@@ -1,0 +1,64 @@
+appId: ai.reppic.desktop
+productName: Reppic
+copyright: © The Sales Studios B.V.
+
+directories:
+  output: dist
+  buildResources: build
+
+# --- KRITIEK (Recall-vereiste) ---------------------------------------------
+# De Recall Desktop SDK bevat native binaries. Die MOGEN NIET in het asar-archief
+# zitten, anders laadt de SDK niet in een verpakte app. Recall's eigen sample doet
+# hetzelfde via forge asar.unpackDir "node_modules/@recallai".
+asar: true
+asarUnpack:
+  - "node_modules/@recallai/**"
+
+# Alleen de shell-bestanden meebundelen (de web-UI komt van app.reppic.ai).
+files:
+  - "main.js"
+  - "preload.js"
+  - "chip.html"
+  - "chip-preload.js"
+  - "package.json"
+
+# Auto-update-feed. Zet UPDATE_FEED_URL per omgeving:
+#   test:      https://<testserver>/desktop/updates/
+#   productie: https://<productieserver>/desktop/updates/
+publish:
+  provider: generic
+  url: "${env.UPDATE_FEED_URL}"
+
+# --- macOS (alleen Apple Silicon; Recall SDK ondersteunt geen Intel-Mac) -----
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch: [arm64]
+    - target: zip          # zip is vereist voor electron-updater op macOS
+      arch: [arm64]
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  # Notarisatie draait alleen bij een ondertekende dist-build; vereist de env-vars
+  # APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD + APPLE_TEAM_ID.
+  notarize: true
+  extendInfo:
+    NSMicrophoneUsageDescription: "Reppic gebruikt de microfoon om je gesprekken op te nemen."
+    NSCameraUsageDescription: "Reppic kan tijdens een opname toegang tot de camera nodig hebben."
+    # VERPLICHT voor de system-audio-permissie van de Recall SDK (docs.recall.ai
+    # audio-only.md): zonder deze sleutel toont macOS de vraag om
+    # systeemaudio-opname nooit en blijft de permissie op "denied" staan.
+    NSAudioCaptureUsageDescription: "Reppic neemt systeemaudio op zodat ook de gesprekspartner hoorbaar is in de opname."
+
+# --- Windows (x64; ondertekening met GlobalSign EV volgt zodra het cert er is) -
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
