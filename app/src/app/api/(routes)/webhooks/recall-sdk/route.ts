@@ -21,8 +21,11 @@ export const dynamic = "force-dynamic";
  * webhook -> analysis -> dashboards) is unchanged.
  *
  * Unlike the legacy bot webhook, this endpoint VERIFIES the Svix signature
- * (Recall signs all webhooks via Svix). Configure the endpoint's signing
- * secret as RECALL_WEBHOOK_SECRET (whsec_...).
+ * (Recall signs all webhooks via Svix). Every Svix endpoint has its OWN signing
+ * secret, so this desktop-SDK endpoint (distinct from the meeting-bot endpoint)
+ * uses its own RECALL_SDK_WEBHOOK_SECRET (whsec_...). For backward compatibility
+ * it falls back to RECALL_WEBHOOK_SECRET, and verifies against every configured
+ * secret so a shared-secret setup keeps working during the transition.
  */
 
 interface RecallSdkWebhookPayload {
@@ -40,27 +43,44 @@ function verifySignature(
   payload: string,
   req: NextRequest
 ): RecallSdkWebhookPayload | null {
-  const secret = process.env.RECALL_WEBHOOK_SECRET;
+  // Each Svix webhook endpoint has its own signing secret. Prefer this
+  // endpoint's dedicated RECALL_SDK_WEBHOOK_SECRET, fall back to the shared
+  // RECALL_WEBHOOK_SECRET, and accept the webhook if it verifies against any
+  // configured secret (robust while the prod env is being rolled out).
+  const secrets = [
+    process.env.RECALL_SDK_WEBHOOK_SECRET,
+    process.env.RECALL_WEBHOOK_SECRET,
+  ].filter((s): s is string => !!s);
 
-  if (!secret) {
+  if (secrets.length === 0) {
     // Fail closed: without a secret we cannot trust the caller.
     console.error(
-      "[Recall SDK Webhook] RECALL_WEBHOOK_SECRET is not set — rejecting webhook."
+      "[Recall SDK Webhook] Neither RECALL_SDK_WEBHOOK_SECRET nor RECALL_WEBHOOK_SECRET is set — rejecting webhook."
     );
     return null;
   }
 
-  try {
-    const webhook = new Webhook(secret);
-    return webhook.verify(payload, {
-      "svix-id": req.headers.get("svix-id") ?? "",
-      "svix-timestamp": req.headers.get("svix-timestamp") ?? "",
-      "svix-signature": req.headers.get("svix-signature") ?? "",
-    }) as RecallSdkWebhookPayload;
-  } catch (error) {
-    console.error("[Recall SDK Webhook] Signature verification failed:", error);
-    return null;
+  const headers = {
+    "svix-id": req.headers.get("svix-id") ?? "",
+    "svix-timestamp": req.headers.get("svix-timestamp") ?? "",
+    "svix-signature": req.headers.get("svix-signature") ?? "",
+  };
+
+  for (const secret of secrets) {
+    try {
+      return new Webhook(secret).verify(
+        payload,
+        headers
+      ) as RecallSdkWebhookPayload;
+    } catch {
+      // Try the next configured secret.
+    }
   }
+
+  console.error(
+    "[Recall SDK Webhook] Signature verification failed for all configured secrets."
+  );
+  return null;
 }
 
 export async function POST(req: NextRequest) {
