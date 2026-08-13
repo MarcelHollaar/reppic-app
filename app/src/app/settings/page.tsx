@@ -5,7 +5,7 @@ import DashboardModelComponent from "@/components/settings/DashboardModelCompone
 import TranscriptAnalysisPromptComponent from "@/components/settings/TranscriptAnalysisPromptComponent";
 import LmsChatModelComponent from "@/components/settings/LmsChatModelComponent";
 import LmsEmbeddingsModelComponent from "@/components/settings/LmsEmbeddingsModelComponent";
-import HubspotConnectionComponent from "@/components/settings/HubspotConnectionComponent";
+import CrmConnectionComponent from "@/components/settings/CrmConnectionComponent";
 import CalendarConnectionComponent from "@/components/settings/CalendarConnectionComponent";
 import PrepAnalysisPromptComponent from "@/components/settings/PrepAnalysisPromptComponent";
 import LanguageSettings from "@/components/settings/LanguageComponent";
@@ -46,12 +46,12 @@ function SettingsPage() {
     });
   }
 
-  // HubSpot-koppeling: company-admin (manager) én superadmin.
+  // CRM-koppeling (HubSpot/Salesforce/Dynamics): company-admin (manager) én superadmin.
   if (userRole === USER_ROLE.MANAGER || userRole === USER_ROLE.SUPER_ADMIN) {
     dynamicTabs.push({
       label: t("settings.integrations"),
       value: "integrations",
-      component: <HubspotConnectionComponent />,
+      component: <CrmConnectionComponent />,
     });
   }
 
@@ -144,7 +144,7 @@ function SettingsPage() {
       component: <LanguageSettings />,
     },
     // Agenda-koppeling: per verkoper (elke rol), anders dan de per-company
-    // HubSpot-kaart die in de manager+/superadmin-integrations-tab blijft.
+    // CRM-kaart die in de manager+/superadmin-integrations-tab blijft.
     {
       label: t("calendar.tab"),
       value: "calendar",

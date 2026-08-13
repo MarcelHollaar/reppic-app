@@ -173,7 +173,7 @@ model ProspectAccount {
   company_id         String   @map("company_id") @db.VarChar(40)
   domain             String   @map("domain") @db.VarChar(255)
   name               String?  @map("name") @db.VarChar(255)
-  hubspot_company_id String?  @map("hubspot_company_id") @db.VarChar(64)
+  crm_company_id     String?  @map("crm_company_id") @db.VarChar(64)
   created_at         DateTime @default(now()) @map("created_at")
   updated_at         DateTime @updatedAt @map("updated_at")
 
@@ -199,7 +199,7 @@ model ConversationPrep {
   meeting_title           String?   @map("meeting_title") @db.VarChar(255)
   meeting_start           DateTime  @map("meeting_start")
   source_conversation_ids Json      @map("source_conversation_ids")
-  hubspot_deal_id         String?   @map("hubspot_deal_id") @db.VarChar(64)
+  crm_deal_id             String?   @map("crm_deal_id") @db.VarChar(64)
   content                 Json?     @map("content")
   status                  String    @default("pending") @map("status") @db.VarChar(20)
   skip_reason             String?   @map("skip_reason") @db.VarChar(100)
@@ -535,23 +535,29 @@ model TranscriptAnalysisPromptVersion {
   @@map("transcript_analysis_prompt_versions")
 }
 
-// Gespreksvoorbereiding: HubSpot-koppeling per tenant (Company). Tokens
-// staan encrypted-at-rest via src/lib/crypto/secretBox.ts (ENCRYPTION_KEY).
-// status: active | broken (refresh geweigerd; opnieuw verbinden nodig).
-model HubspotConnection {
-  id                String   @id @default(uuid()) @map("id") @db.VarChar(40)
-  company_id        String   @unique @map("company_id") @db.VarChar(40)
-  portal_id         String   @map("portal_id") @db.VarChar(32)
-  access_token_enc  String   @map("access_token_enc") @db.Text
-  refresh_token_enc String   @map("refresh_token_enc") @db.Text
-  expires_at        DateTime @map("expires_at")
-  scopes            String?  @map("scopes") @db.Text
-  status            String   @default("active") @map("status") @db.VarChar(20)
-  connected_by      String?  @map("connected_by") @db.VarChar(40)
-  created_at        DateTime @default(now()) @map("created_at")
-  updated_at        DateTime @updatedAt @map("updated_at")
+// Gespreksvoorbereiding: CRM-koppeling per tenant (Company). Eén actieve CRM
+// per bedrijf; `provider` bepaalt welke (hubspot | salesforce | dynamics).
+// Tokens staan encrypted-at-rest via src/lib/crypto/secretBox.ts
+// (ENCRYPTION_KEY). status: active | broken (refresh geweigerd; opnieuw
+// verbinden nodig). external_account_id = portal-id (HubSpot) / org-id
+// (Salesforce/Dynamics). instance_url = per-connectie API-basis voor
+// Salesforce (instance_url) en Dynamics (org-URL); null voor HubSpot.
+model CrmConnection {
+  id                  String   @id @default(uuid()) @map("id") @db.VarChar(40)
+  company_id          String   @unique @map("company_id") @db.VarChar(40)
+  provider            String   @map("provider") @db.VarChar(20)
+  external_account_id String   @map("external_account_id") @db.VarChar(64)
+  instance_url        String?  @map("instance_url") @db.Text
+  access_token_enc    String   @map("access_token_enc") @db.Text
+  refresh_token_enc   String   @map("refresh_token_enc") @db.Text
+  expires_at          DateTime @map("expires_at")
+  scopes              String?  @map("scopes") @db.Text
+  status              String   @default("active") @map("status") @db.VarChar(20)
+  connected_by        String?  @map("connected_by") @db.VarChar(40)
+  created_at          DateTime @default(now()) @map("created_at")
+  updated_at          DateTime @updatedAt @map("updated_at")
 
-  @@map("hubspot_connections")
+  @@map("crm_connections")
 }
 
 model DesktopSdkUpload {

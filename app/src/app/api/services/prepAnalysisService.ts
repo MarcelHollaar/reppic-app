@@ -3,7 +3,7 @@ import { completeChat } from "./litellmClient";
 import { platformSettingsService } from "./platformSettingsService";
 import { prepAnalysisPromptService } from "./prepAnalysisPromptService";
 import { ProspectAccountService } from "./prospectAccountService";
-import { HubspotService } from "./hubspotService";
+import { getActiveCrmProvider } from "./crm/registry";
 import { mailService } from "./mailService";
 import {
   parsePrepContent,
@@ -13,10 +13,11 @@ import { extractExternalAttendees } from "@/lib/prospect/resolveProspect";
 import { RecallCalendarService } from "./recallCalendarService";
 
 // Kern van de gespreksvoorbereiding: combineert de analyse van het vorige
-// gesprek met dezelfde klant en de HubSpot-dealcontext tot een briefing, en
+// gesprek met dezelfde klant en de CRM-dealcontext (HubSpot/Salesforce/
+// Dynamics, provider-neutraal via crm/registry) tot een briefing, en
 // mailt die naar de verkoper. Fallback-matrix (bouwplan):
-//   - geen HubSpot        -> prep alleen uit het vorige gesprek
-//   - geen vorig gesprek  -> prep alleen uit HubSpot
+//   - geen CRM            -> prep alleen uit het vorige gesprek
+//   - geen vorig gesprek  -> prep alleen uit het CRM
 //   - geen van beide      -> skipped (no_sources), géén mail
 // Elke meeting krijgt altijd een ConversationPrep-rij (dedupe + inzicht).
 
@@ -139,7 +140,7 @@ function buildPreviousConversationsBlock(
 }
 
 /** Filtert bruikbare bron-gesprekken; optioneel gescoopt op de e-mailadressen
- *  van de contacten van de gevonden HubSpot-deal (per-deal context). */
+ *  van de contacten van de gevonden CRM-deal (per-deal context). */
 function selectSourceConversations(
   conversations: SourceConversation[],
   dealContactEmails: string[]
@@ -323,51 +324,56 @@ export const prepAnalysisService = {
     });
 
     try {
-      // --- Bron 1: HubSpot-context (eerst, want de deal stuurt de scoping) ---
+      // --- Bron 1: CRM-context (eerst, want de deal stuurt de scoping) ---
+      // Provider-neutraal: de actieve CRM van het bedrijf (HubSpot, Salesforce
+      // of Dynamics) levert dezelfde CrmContext; hier weten we niet welke.
       let crmBlock: string | null = null;
-      let hubspotDealId: string | null = null;
-      let hubspotCompanyId: string | null = null;
+      let crmDealId: string | null = null;
+      let crmCompanyId: string | null = null;
       let prospectDisplayName: string | null = null;
       let dealContactEmails: string[] = [];
       try {
-        for (const email of externalAttendees.slice(0, 3)) {
-          const context = await HubspotService.findCrmContextByEmail(
-            companyId,
-            email
-          );
-          if (context) {
-            crmBlock = HubspotService.buildCrmContextBlock(context);
-            hubspotDealId = context.deal?.id ?? null;
-            hubspotCompanyId = context.company?.id ?? null;
-            prospectDisplayName =
-              context.company?.name ||
-              [context.contact?.firstName, context.contact?.lastName]
-                .filter(Boolean)
-                .join(" ") ||
-              null;
-            break;
+        const crmProvider = await getActiveCrmProvider(companyId);
+        if (crmProvider) {
+          for (const email of externalAttendees.slice(0, 3)) {
+            const context = await crmProvider.findCrmContextByEmail(
+              companyId,
+              email
+            );
+            if (context) {
+              crmBlock = crmProvider.buildCrmContextBlock(context);
+              crmDealId = context.deal?.id ?? null;
+              crmCompanyId = context.company?.id ?? null;
+              prospectDisplayName =
+                context.company?.name ||
+                [context.contact?.firstName, context.contact?.lastName]
+                  .filter(Boolean)
+                  .join(" ") ||
+                null;
+              break;
+            }
+          }
+          // Per-deal scoping: de contacten van de deal bepalen welke eerdere
+          // gesprekken relevant zijn (i.p.v. alles op klant-domein).
+          if (crmDealId) {
+            dealContactEmails = await crmProvider.getDealContactEmails(
+              companyId,
+              crmDealId
+            );
           }
         }
-        // Per-deal scoping: de contacten van de deal bepalen welke eerdere
-        // gesprekken relevant zijn (i.p.v. alles op klant-domein).
-        if (hubspotDealId) {
-          dealContactEmails = await HubspotService.getDealContactEmails(
-            companyId,
-            hubspotDealId
-          );
-        }
       } catch (error) {
-        // CRM-context is verrijking; nooit de prep laten falen op HubSpot.
-        console.error("[Prep] HubSpot context failed (non-fatal):", error);
+        // CRM-context is verrijking; nooit de prep laten falen op de CRM.
+        console.error("[Prep] CRM context failed (non-fatal):", error);
       }
 
-      // HubSpot-company-id op de prospect vastleggen zodra bekend
-      // (bestaand veld; maakt latere koppelingen betrouwbaarder).
-      if (prospectAccountId && hubspotCompanyId) {
+      // CRM-company-id op de prospect vastleggen zodra bekend
+      // (maakt latere koppelingen betrouwbaarder).
+      if (prospectAccountId && crmCompanyId) {
         prisma.prospectAccount
           .update({
             where: { id: prospectAccountId },
-            data: { hubspot_company_id: hubspotCompanyId },
+            data: { crm_company_id: crmCompanyId },
           })
           .catch(() => {});
       }
@@ -389,7 +395,7 @@ export const prepAnalysisService = {
           sourceConversationIds = selected.map((c) => c.id);
           if (dealScoped) {
             console.log(
-              `[Prep] Deal-scoped sources: ${selected.length} conversation(s) for deal ${hubspotDealId}`
+              `[Prep] Deal-scoped sources: ${selected.length} conversation(s) for deal ${crmDealId}`
             );
           }
         }
@@ -416,8 +422,7 @@ export const prepAnalysisService = {
         meetingBlock,
         previousBlock ??
           "## Analyses van eerdere gesprekken\n(Geen eerder geanalyseerd gesprek met deze klant beschikbaar.)",
-        crmBlock ??
-          "## CRM-context (HubSpot)\n(Geen CRM-context beschikbaar.)",
+        crmBlock ?? "## CRM-context\n(Geen CRM-context beschikbaar.)",
       ].join("\n\n");
 
       const language = user.lang_code || "nl";
@@ -448,7 +453,7 @@ export const prepAnalysisService = {
           status: "generated",
           skip_reason: null,
           content: content as object,
-          hubspot_deal_id: hubspotDealId,
+          crm_deal_id: crmDealId,
           prospect_account_id: prospectAccountId,
           source_conversation_ids: sourceConversationIds,
         },
