@@ -17,8 +17,10 @@ export async function GET(req: NextRequest) {
   if (authCheck) return authCheck;
 
   const user = (req as any).user;
+  // Ook zonder company (bijv. platform-superadmin) hoort de providerlijst
+  // mee terug: anders heeft de integraties-kaart nul knoppen om te tonen.
   if (!user?.company_id) {
-    return NextResponse.json({ connected: false, providers: [] });
+    return NextResponse.json({ connected: false, providers: listCrmProviders() });
   }
 
   try {
