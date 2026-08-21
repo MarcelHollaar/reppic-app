@@ -105,7 +105,12 @@ function toAnalysisRouteRuntimeConfig(liteLLMRoute: LiteLLMModelRoute): {
 } {
   return {
     model: liteLLMRoute.model,
-    tag: liteLLMRoute.tag,
+    // Val terug op de env-tag ("baseline") als de route zelf geen tag heeft.
+    // Met een virtuele sleutel is /model/info geblokkeerd, dus routes komen kaal
+    // uit /v1/models (tag=null); de gateway weigert een tag-loze analyse-call
+    // met HTTP 500 ("'>' not supported between NoneType and int"). De overige
+    // paden in getAnalysisLiteLLMRoute deden deze terugval al — dit sluit het gat.
+    tag: liteLLMRoute.tag ?? getDefaultAnalysisRoutingTagFromEnv(),
     usesAdaptiveThinking: liteLLMRoute.usesAdaptiveThinking,
   };
 }
