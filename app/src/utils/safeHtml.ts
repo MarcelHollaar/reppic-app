@@ -27,6 +27,24 @@ export function formatBasicTextToSafeHtml(input: unknown): string {
 }
 
 /**
+ * Render an AI-generated conversation summary as safe HTML. Like
+ * formatBasicTextToSafeHtml, but geared to the summary text: everything is
+ * HTML-escaped FIRST, then a fixed set of formatting is re-introduced —
+ * `**bold**`, blank-line paragraph gaps (a `.small-gap` spacer, styled inside a
+ * `.custom-br` container), single newlines as <br/>, and stray markdown `#`
+ * stripped. Because the escape happens before any tag is inserted, injected
+ * markup can never render as HTML (fixes the dashboard showing literal
+ * `<span class="small-gap">` tags, and keeps the stored-XSS protection intact).
+ */
+export function formatSummaryToSafeHtml(input: unknown): string {
+  return escapeHtml(input)
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\n{2,}/g, '<span class="small-gap"></span>')
+    .replace(/\r?\n/g, "<br/>")
+    .replace(/#/g, "");
+}
+
+/**
  * Sanitize an HTML video-embed snippet (iframe embeds) before injecting it via
  * dangerouslySetInnerHTML. Iframes/divs are kept, but the script-execution
  * vectors are removed: <script> blocks, inline event handlers (onerror, onload,

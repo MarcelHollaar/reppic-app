@@ -15,7 +15,6 @@ import {
   ConversationDetailResponse,
   useConversationDetailContext,
 } from "./providers/ConversationDetailProvider";
-import { summaryFormatter } from "./utils/summaryFormatter";
 import { toast } from "react-hot-toast";
 import { useEffect, useCallback, useRef } from "react";
 import { useAudioRecorderContext } from "@/context/AudioRecorderContext";
@@ -335,11 +334,7 @@ export const ConversationDetailPage = () => {
               />
               <div className="tw-w-full md:tw-w-2/3">
                 <ConversationSummary
-                  summary={
-                    summaryFormatter(
-                      conversation_summaries[0]?.summary_text || ""
-                    ) || ""
-                  }
+                  summary={conversation_summaries[0]?.summary_text || ""}
                   learningPoints={conversation_summaries[0]?.learning_points}
                 />
               </div>

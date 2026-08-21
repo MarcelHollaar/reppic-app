@@ -1,5 +1,5 @@
 import { t } from "i18next";
-import { formatBasicTextToSafeHtml } from "@/utils/safeHtml";
+import { formatSummaryToSafeHtml } from "@/utils/safeHtml";
 
 interface ConversationSummaryProps {
   summary: string;
@@ -21,7 +21,7 @@ export const ConversationSummary = ({
           {/* Render summary with bold formatting for **text** */}
           <span
             className="tw-leading-tight custom-br"
-            dangerouslySetInnerHTML={{ __html: formatBasicTextToSafeHtml(summary) }}
+            dangerouslySetInnerHTML={{ __html: formatSummaryToSafeHtml(summary) }}
           />
         </p>
 
