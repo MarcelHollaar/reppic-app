@@ -44,6 +44,10 @@ services:
         - RECORDINGS_FOLDER=${RECORDINGS_FOLDER}
         - RECALL_API_KEY=${RECALL_API_KEY}
         - RECALL_WEBHOOK_SECRET=${RECALL_WEBHOOK_SECRET}
+        # Eigen signing-secret van het desktop-SDK-webhook-endpoint (Svix geeft
+        # elk endpoint een eigen whsec_). Moet als build-arg mee omdat Next.js
+        # process.env-waarden bij `next build` in de serverbundle inlijnt.
+        - RECALL_SDK_WEBHOOK_SECRET=${RECALL_SDK_WEBHOOK_SECRET}
         - EXCEL_DATA_FTP_FOLDER=${EXCEL_DATA_FTP_FOLDER}
         - LMS_API_URL=${LMS_API_URL}
         - LMS_WEBHOOK_SECRET=${LMS_WEBHOOK_SECRET}
@@ -100,6 +104,8 @@ services:
       - RECORDINGS_FOLDER=${RECORDINGS_FOLDER}
       - RECALL_API_KEY=${RECALL_API_KEY}
       - RECALL_WEBHOOK_SECRET=${RECALL_WEBHOOK_SECRET}
+      # Eigen signing-secret van het desktop-SDK-webhook-endpoint (zie build-args).
+      - RECALL_SDK_WEBHOOK_SECRET=${RECALL_SDK_WEBHOOK_SECRET}
       - EXCEL_DATA_FTP_FOLDER=${EXCEL_DATA_FTP_FOLDER}
       - LMS_API_URL=${LMS_API_URL}
       - LMS_WEBHOOK_SECRET=${LMS_WEBHOOK_SECRET}
